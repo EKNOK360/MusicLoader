@@ -1,4 +1,4 @@
-﻿# Letras SINCRONIZADAS (LRC) para los FLAC de D:\SpotiFLAC. Fuente: LRCLIB (lrclib.net, base abierta y gratuita).
+﻿# Letras SINCRONIZADAS (LRC) para los FLAC. Fuentes: LRCLIB y NetEase Cloud Music (ver lrc-fuentes.ps1).
 #  - Sin letra sincronizada  -> se agrega la de LRCLIB si es valida.
 #  - Con letra sincronizada  -> se compara linea por linea con LRCLIB; si va desfasada (> 0.75 s de mediana)
 #                               o tiene tiempos despues del final de la cancion, se reemplaza por la de LRCLIB.
@@ -10,6 +10,7 @@
 param([switch]$Aplicar, [string]$Archivo = "")
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\progreso.ps1"
+. "$PSScriptRoot\lrc-fuentes.ps1"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $dir = (Join-Path $env:USERPROFILE 'reportes-musica')
 $mf = Get-Content "$dir\metaflac-path.txt"
@@ -34,20 +35,14 @@ function Lineas($lrc) {  # -> lista de @{t=segundos; x=texto normalizado}
         [pscustomobject]@{ t = [int]$m.Groups[1].Value * 60 + [double]$m.Groups[2].Value; x = (Norm $m.Groups[3].Value) }
     }
 }
-function Buscar($art, $tit, $alb, $dur) {
+function Buscar($art, $tit, $alb, $dur) {  # LRCLIB y, si no hay, NetEase (ver lrc-fuentes.ps1). Cache por cancion.
     $k = "$art|$tit|$([int]$dur)"
-    if ($cache.ContainsKey($k)) { return $cache[$k] }
-    $cands = @()
-    try { $g = Json "https://lrclib.net/api/get?artist_name=$([uri]::EscapeDataString($art))&track_name=$([uri]::EscapeDataString($tit))&album_name=$([uri]::EscapeDataString($alb))&duration=$([int][Math]::Round($dur))"; if ($g) { $cands += $g } } catch { }
-    try { $cands += @(Json "https://lrclib.net/api/search?artist_name=$([uri]::EscapeDataString($art))&track_name=$([uri]::EscapeDataString($tit))") } catch { }
-    $cands = @($cands | ForEach-Object { $_ } | Where-Object { $_ -and $_.duration })
-    $inst = [bool]($cands | Where-Object { $_.instrumental -and [Math]::Abs([double]$_.duration - $dur) -le 2 })
-    $best = $cands | Where-Object { $_.syncedLyrics -and [Math]::Abs([double]$_.duration - $dur) -le 2 } | Sort-Object { [Math]::Abs([double]$_.duration - $dur) } | Select-Object -First 1
-    $v = [pscustomobject]@{ lrc = $(if ($best) { $best.syncedLyrics } else { '' }); dur = $(if ($best) { [double]$best.duration } else { 0 }); inst = $inst }
+    if ($cache.ContainsKey($k) -and ($cache[$k].lrc -or $cache[$k].inst -or $cache[$k].v2)) { return $cache[$k] }
+    $r = BuscarLetra $art $tit $alb $dur
+    $v = [pscustomobject]@{ lrc = $r.lrc; fuente = $r.fuente; inst = $r.inst; v2 = $true }
     $cache[$k] = $v; Start-Sleep -Milliseconds 250
     $v
-}
-function Valida($lrc, $dur) { $l = @(Lineas $lrc); $l.Count -ge 5 -and $l[-1].t -le $dur + 1 }
+}function Valida($lrc, $dur) { $l = @(Lineas $lrc); $l.Count -ge 5 -and $l[-1].t -le $dur + 1 }
 function Desfase($vieja, $nueva) {  # mediana de (tiempo viejo - tiempo nuevo); cada linea se compara con su repeticion MAS CERCANA (coros)
     $n = @{}; foreach ($l in Lineas $nueva) { if ($l.x.Length -ge 6) { if (-not $n.ContainsKey($l.x)) { $n[$l.x] = New-Object Collections.Generic.List[double] }; $n[$l.x].Add($l.t) } }
     $d = @(foreach ($l in Lineas $vieja) { if ($n.ContainsKey($l.x)) { $tv = $l.t; ($n[$l.x] | Sort-Object { [Math]::Abs($tv - $_) } | Select-Object -First 1 | ForEach-Object { $tv - $_ }) } }) | Sort-Object

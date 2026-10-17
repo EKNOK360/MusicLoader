@@ -9,9 +9,9 @@ Skill de [Claude Code](https://claude.com/claude-code) para gestionar tu bibliot
 | 🔍 **Canciones perdidas** | Encuentra carpetas de álbumes vacías y crea una playlist en Spotify para volver a descargarlas. |
 | 📁 **Ordenar** | Pasa cada descarga a `Artista\Álbum\canción`, leyendo los datos del propio archivo (sirve para cualquier descargador), y guarda en respaldo lo que reemplaza. |
 | 🧩 **Completar metadatos** | Para FLAC, MP3 y M4A: agrega lo que falte (título, artista, álbum, año, pista, género y **portada en 1200 px**) desde iTunes, y la **letra sincronizada** desde LRCLIB. En MP3 la letra también queda en un `.lrc` al lado. |
-| 🔁 **Duplicados** | Detecta canciones repetidas y se queda con la de **mejor calidad** (lee los bits y kHz de cada FLAC). |
+| 🔁 **Duplicados** | Detecta canciones repetidas y arma un **cuadro comparativo** (calidad, tamaño, portada, letra, género) marcando la mejor. **No borra nada** hasta que tú lo confirmes. |
 | 🏷️ **Géneros** | Busca el género de cada artista en MusicBrainz y lo escribe en el archivo, **solo esa etiqueta**. |
-| 🎤 **Letras sincronizadas** | Agrega letras LRC desde LRCLIB, corrige las desincronizadas y salta las instrumentales. Solo acepta letras cuya duración coincide con la de tu archivo. |
+| 🎤 **Letras sincronizadas** | Agrega letras LRC desde LRCLIB y **NetEase Cloud Music**, corrige las desincronizadas y salta las instrumentales. Solo acepta letras cuya duración coincide con la de tu archivo. |
 | 🖼️ **Portadas** | Revisa qué canciones no tienen portada o la tienen pequeña (menos de 500 px), agrupadas por álbum. |
 | 🩺 **Archivos sanos** | Decodifica todo el audio de cada FLAC para confirmar que ninguno esté dañado. |
 | 🛠️ **Mantenimiento completo** | Un solo comando revisa toda la biblioteca: acomoda, pone géneros, letras, metadatos y portadas, y reporta repetidas. |

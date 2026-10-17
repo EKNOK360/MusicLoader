@@ -2,7 +2,7 @@
 # Solo AGREGA lo que falta; nunca cambia lo que ya tiene el archivo.
 #   - Titulo, artista, album, artista del album, ano, pista y genero  -> iTunes Search API (gratis, sin cuenta)
 #   - Portada (1200 px)                                               -> iTunes
-#   - Letra SINCRONIZADA                                              -> LRCLIB (duracion +-2 s)
+#   - Letra SINCRONIZADA                                              -> LRCLIB o NetEase (duracion +-2 s)
 # Escritura:
 #   FLAC: metaflac (solo etiquetas/imagen; el audio no se toca). Se comprueba la huella de los bytes de audio.
 #   MP3 : ffmpeg crea una copia con las etiquetas (-c copy); se compara CADA cuadro de audio y las etiquetas
@@ -12,6 +12,7 @@
 param([string]$Raiz = "", [string]$Archivo = "", [switch]$Aplicar, [switch]$SinLetras, [switch]$SinPortadas)
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\progreso.ps1"
+. "$PSScriptRoot\lrc-fuentes.ps1"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 $dir = Join-Path $env:USERPROFILE 'reportes-musica'; New-Item -ItemType Directory -Force $dir | Out-Null
@@ -42,15 +43,7 @@ function ITunes($art, $tit) {
     $cache[$k] = $v; Start-Sleep -Seconds 3  # iTunes permite ~20 consultas por minuto
     $v
 }
-function Letra($art, $tit, $alb, $dur) {
-    try {
-        $c = @(); try { $c += Json "https://lrclib.net/api/get?artist_name=$([uri]::EscapeDataString($art))&track_name=$([uri]::EscapeDataString($tit))&album_name=$([uri]::EscapeDataString($alb))&duration=$([int][Math]::Round($dur))" } catch { }
-        try { $c += @(Json "https://lrclib.net/api/search?artist_name=$([uri]::EscapeDataString($art))&track_name=$([uri]::EscapeDataString($tit))") } catch { }
-        $c = @($c | ForEach-Object { $_ } | Where-Object { $_ -and $_.syncedLyrics -and [Math]::Abs([double]$_.duration - $dur) -le 2 } | Sort-Object { [Math]::Abs([double]$_.duration - $dur) })
-        if ($c) { $l = $c[0].syncedLyrics; $m = [regex]::Matches($l, '(?m)^\[(\d+):(\d+(?:\.\d+)?)\]'); if ($m.Count -ge 5 -and ([int]$m[$m.Count - 1].Groups[1].Value * 60 + [double]$m[$m.Count - 1].Groups[2].Value) -le $dur + 1) { return $l } }
-    } catch { }
-    ''
-}
+function Letra($art, $tit, $alb, $dur) { (BuscarLetra $art $tit $alb $dur).lrc }  # LRCLIB + NetEase (lrc-fuentes.ps1)
 
 $archivos = if ($Archivo) { @(Get-Item -LiteralPath $Archivo) } else { @(Get-ChildItem $Raiz -Recurse -File -Include *.flac, *.mp3, *.m4a) }
 $campos = 'title', 'artist', 'album', 'album_artist', 'date', 'track', 'genre'
