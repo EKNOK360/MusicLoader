@@ -4,7 +4,7 @@ function NormS($s) { if (-not $s) { return '' }; ($s.Normalize([Text.Normalizati
 $script:vig = @(Get-Content "$env:USERPROFILE\reportes-musica\vigilar.txt" -Encoding utf8); $script:lista = if ($script:vig.Count -gt 2 -and $script:vig[2]) { @(@(Get-Content $script:vig[2] -Raw -Encoding utf8 | ConvertFrom-Json) | ForEach-Object { $_ }) } else { @((@(Get-Content "$env:USERPROFILE\reportes-musica\playlists.json" -Raw -Encoding utf8 | ConvertFrom-Json) | ForEach-Object { $_ } | Where-Object nombre -eq $script:vig[0]).canciones) }
 function Saltadas {
     $tengo = New-Object 'Collections.Generic.HashSet[string]'
-    Get-ChildItem -LiteralPath (Join-Path "D:\SpotiFLAC" $script:vig[1]) -Recurse -File -Include *.flac, *.m4a, *.mp3 | ForEach-Object {
+    Get-ChildItem -LiteralPath (Join-Path "D:\SpotiFLAC" $script:vig[1]) -Recurse -File | Where-Object { $_.Extension -in '.flac', '.m4a', '.mp3' } | ForEach-Object {
         $p = $_.BaseName -split ' - ', 2
         foreach ($a in $p[0] -split ',\s*') { [void]$tengo.Add("$(NormS $a)|$(NormS $p[1])") }
     }

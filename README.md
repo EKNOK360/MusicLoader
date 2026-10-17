@@ -1,13 +1,14 @@
 # MusicLoader
 
-Skill de [Claude Code](https://claude.com/claude-code) para gestionar una biblioteca de música FLAC descargada con **SpotiFLAC** y organizar tus playlists de **Spotify**. Le hablas a Claude en lenguaje normal ("revisa mi música", "vigila la descarga", "ponles letra") y la skill sabe qué hacer.
+Skill de [Claude Code](https://claude.com/claude-code) para gestionar tu biblioteca de música (**FLAC, MP3 o M4A**) descargada con **SpotiFLAC o con cualquier otro descargador**, y organizar tus playlists de **Spotify**. Le hablas a Claude en lenguaje normal ("revisa mi música", "vigila la descarga", "ponles letra") y la skill sabe qué hacer.
 
 ## Qué hace
 
 | Función | Descripción |
 |---|---|
 | 🔍 **Canciones perdidas** | Encuentra carpetas de álbumes vacías y crea una playlist en Spotify para volver a descargarlas. |
-| 📁 **Ordenar** | Pasa cada descarga a `Artista\Álbum\canción` y guarda en respaldo lo que reemplaza. |
+| 📁 **Ordenar** | Pasa cada descarga a `Artista\Álbum\canción`, leyendo los datos del propio archivo (sirve para cualquier descargador), y guarda en respaldo lo que reemplaza. |
+| 🧩 **Completar metadatos** | Para FLAC, MP3 y M4A: agrega lo que falte (título, artista, álbum, año, pista, género y **portada en 1200 px**) desde iTunes, y la **letra sincronizada** desde LRCLIB. En MP3 la letra también queda en un `.lrc` al lado. |
 | 🔁 **Duplicados** | Detecta canciones repetidas y se queda con la de **mejor calidad** (lee los bits y kHz de cada FLAC). |
 | 🏷️ **Géneros** | Busca el género de cada artista en MusicBrainz y lo escribe en el archivo, **solo esa etiqueta**. |
 | 🎤 **Letras sincronizadas** | Agrega letras LRC desde LRCLIB, corrige las desincronizadas y salta las instrumentales. Solo acepta letras cuya duración coincide con la de tu archivo. |
@@ -22,7 +23,7 @@ Antes y después de cada cambio se verifica que **el audio, las letras, la porta
 
 - Windows 10/11 con PowerShell 5.1.
 - [Claude Code](https://claude.com/claude-code).
-- [SpotiFLAC](https://github.com/afkarxyz/SpotiFLAC), con la música en `D:\SpotiFLAC` (se puede cambiar con el parámetro `-Raiz` de los scripts).
+- Tu música en una carpeta, descargada con [SpotiFLAC](https://github.com/afkarxyz/SpotiFLAC) **o con cualquier otro programa** (FLAC, MP3, M4A). Por defecto `D:\SpotiFLAC`; para usar otra, crea `%USERPROFILE%\reportes-musica\config.json` con `{ "raiz": "D:\\Musica" }`.
 - Herramientas (con `winget`):
   ```powershell
   winget install Xiph.FLAC      # metaflac: etiquetas FLAC
@@ -57,6 +58,7 @@ Abre Claude Code y pídele cosas como:
 - *"Revisa qué carpetas de mi música están vacías y hazme una playlist para recuperarlas."*
 - *"Ya empezó la descarga, activa el vigilante."*
 - *"Revisa todo: acomoda, quita repetidas y ponles género y letra."*
+- *"Bajé unos MP3 con otro programa: ponles portada, letra y género, y acomódalos."*
 - *"Compara mis likes con lo que tengo descargado."*
 - *"Recomiéndame canciones de electro swing y agrégalas a una playlist para descargar."*
 

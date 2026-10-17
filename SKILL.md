@@ -1,13 +1,13 @@
 ---
 name: music-loader
-description: Gestión completa de una biblioteca de música FLAC descargada con SpotiFLAC (por defecto D:\SpotiFLAC) y de las playlists de Spotify del usuario. Usar cuando el usuario hable de su reproductor de música, SpotiFLAC, descargar canciones, carpetas vacías o canciones perdidas, acomodar/organizar la música por artista y álbum, canciones repetidas/duplicadas, géneros, portadas, letras sincronizadas o metadatos, vigilar una descarga, playlists de Spotify (crear, repartir, comparar, likes, recomendaciones) o diga "music loader".
+description: Gestión completa de una biblioteca de música (FLAC, MP3 o M4A) descargada con SpotiFLAC o con cualquier otro descargador, y de las playlists de Spotify del usuario. Usar cuando el usuario hable de su reproductor de música, SpotiFLAC u otro descargador de música, MP3, descargar canciones, carpetas vacías o canciones perdidas, acomodar/organizar la música por artista y álbum, canciones repetidas/duplicadas, géneros, portadas, letras sincronizadas o metadatos, vigilar una descarga, playlists de Spotify (crear, repartir, comparar, likes, recomendaciones) o diga "music loader".
 ---
 
 # Music Loader
 
 Objetivo: que la biblioteca de música esté completa y en orden para disfrutarla al máximo en el reproductor: canciones sin perder, bien acomodadas, sin repetidas, con portada, género y letra sincronizada.
 
-Biblioteca: por defecto **D:\SpotiFLAC** (parámetro `-Raiz` en los scripts; formato `Artista\Álbum\Artista - Título.flac`).
+Biblioteca: la carpeta de `reportes-musica\config.json` (`{ "raiz": "D:\\Musica" }`; por defecto `D:\SpotiFLAC`), o el parámetro `-Raiz`. Formato final: `Artista\Álbum\Artista - Título.ext`. Sirve para descargas de **SpotiFLAC o de cualquier otro programa** (FLAC, MP3, M4A).
 Scripts: `~/.claude/skills/music-loader/scripts/` (PowerShell 5.1, guardados con UTF-8 BOM).
 Datos/estado: `%USERPROFILE%\reportes-musica\` (Client ID de Spotify, json de playlists, cachés, reglas de géneros, progreso del vigilante). Nada de eso va al repositorio.
 Ejecutar siempre: `powershell -ExecutionPolicy Bypass -File "<script>" <args>`.
@@ -34,7 +34,9 @@ Ejecutar siempre: `powershell -ExecutionPolicy Bypass -File "<script>" <args>`.
 | Faltantes de un artista vs su discografía (sin versiones/repetidas) | `buscar-faltantes-artista.ps1 -Artista "X"` |
 | Recomendaciones (lista `Genero\|Artista\|Titulo`; `?busqueda` libre, `*N` = N más populares, `+Titulo` = forzar) | `recomendar-y-limpiar.ps1 -Nombre <playlist> -Lista x.txt [-TambienEn All]` |
 | Playlist para descargar (copia lo no descargado de otra + lista `Destinos\|Artista\|?busqueda`) | `playlist-descarga.ps1 -Nombre "Descargar X" [-CopiarDe P] [-Lista x.txt]` |
-| Acomodar una descarga en `Artista\Álbum` (viejos con mismo nombre → `_reemplazados`) | `acomodar-descargas.ps1 -Origen "<carpeta>"` |
+| **Completar metadatos** de cualquier descargador (FLAC/MP3/M4A): título, artista, álbum, artista del álbum, año, pista, género y portada 1200 px desde iTunes; letra sincronizada desde LRCLIB. Solo agrega lo que falta. MP3: copia con ffmpeg + comparación del contenido de cada cuadro y del sonido decodificado; letra también en `.lrc` al lado | `completar-metadatos.ps1` (plan) / `-Aplicar` / `-Archivo x` / `-Raiz carpeta` |
+| **Ordenar por etiquetas** (cualquier descargador): mueve a `Raiz\Artista\Álbum\Artista - Título.ext` según las etiquetas (o el nombre "Artista - Título"), con su `.lrc` | `ordenar-por-etiquetas.ps1 -Origen "carpeta de descargas"` (plan) / `-Aplicar` |
+| Acomodar una descarga **de SpotiFLAC** (ya viene en `Artista\Álbum`) (viejos con mismo nombre → `_reemplazados`) | `acomodar-descargas.ps1 -Origen "<carpeta>"` |
 | Repetidas: deja la de **mejor calidad** (lee bits/kHz del FLAC) en la carpeta bien acomodada y borra el resto | `duplicados.ps1` (simulación) / `-Aplicar` |
 | Géneros: buscar en MusicBrainz (1 consulta/s, caché) | `buscar-generos.ps1` |
 | Géneros FLAC (metaflac; mapa de etiquetas + `generos-manual.txt` `Artista\|G1;G2`; no reescribe si ya está igual) | `asignar-generos.ps1` (simulación) / `-Aplicar` |
@@ -57,5 +59,8 @@ Herramientas instaladas (winget): metaflac (`reportes-musica\metaflac-path.txt`)
 4. Reportar en el chat con este formato: barra `█░` de 20, avance N de total, fin estimado, velocidad (🟢 ≥1.5/min, 🟡 1–1.5, 🔴 <1), canción por la que va, saltadas en orden de la lista (`saltadas.ps1`; verificar carpetas vacías antes de dar una saltada por real; repetidas en la lista no son saltadas), internet prom/pico (🟢 >20, 🟡 5–20, 🔴 <5 Mbps), disco D libre y libre al terminar.
 5. Al terminar: confirmar 0 temporales (`.spotiflac-*`, `.tmp`), `acomodar-descargas.ps1`, borrar carpetas vacías de la descarga, revisar repetidas, poner géneros, dar resumen. Si se reinició la PC: revisar duplicados `_01` y re-armar todo.
 
+## Descargas de otros programas (MP3, etc.)
+1. `completar-metadatos.ps1 -Raiz "<carpeta de descargas>"` → revisar plan → `-Aplicar` (así cada archivo tiene artista/álbum/título correctos). 2. `ordenar-por-etiquetas.ps1 -Origen "<carpeta de descargas>"` → `-Aplicar`. 3. Seguir con el mantenimiento completo.
+
 ## Mantenimiento completo ("revisa todo")
-1. Acomodar cualquier carpeta de descarga pendiente. 2. Verificar que todo esté en `Artista\Álbum\canción` (nivel 3), renombrar `_01`. 3. `duplicados.ps1`. 4. `buscar-generos.ps1` → `asignar-generos.ps1` (revisar los artistas sin género y clasificarlos en `generos-manual.txt`) → `-Aplicar`; M4A con `generos-m4a.ps1`. 5. `letras-sincronizadas.ps1` → revisar plan → `-Aplicar`. 6. `revisar-portadas.ps1`. 7. Resumen: total de canciones, sin género, con/sin letra sincronizada, sin portada, repetidas, espacio libre.
+1. Acomodar cualquier carpeta de descarga pendiente. 2. Verificar que todo esté en `Artista\Álbum\canción` (nivel 3), renombrar `_01`. 3. `duplicados.ps1`. 4. `buscar-generos.ps1` → `asignar-generos.ps1` (revisar los artistas sin género y clasificarlos en `generos-manual.txt`) → `-Aplicar`; M4A con `generos-m4a.ps1`. 5. `letras-sincronizadas.ps1` → revisar plan → `-Aplicar` (FLAC: agrega y corrige desincronizadas); `completar-metadatos.ps1` para MP3/M4A y para portadas o datos que falten. 6. `revisar-portadas.ps1`. 7. Resumen: total de canciones, sin género, con/sin letra sincronizada, sin portada, repetidas, espacio libre.

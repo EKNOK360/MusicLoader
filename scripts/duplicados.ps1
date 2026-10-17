@@ -34,6 +34,6 @@ foreach ($g in $grupos) {
 if ($Aplicar) {
     # carpetas sin musica que quedaron vacias
     Get-ChildItem $raiz -Recurse -Directory | Where-Object { -not $_.FullName.StartsWith("$raiz\_reemplazados") } | Sort-Object { $_.FullName.Length } -Descending |
-        Where-Object { -not (Get-ChildItem -LiteralPath $_.FullName -Recurse -File -Include *.flac, *.m4a, *.mp3) } | ForEach-Object { Remove-Item -LiteralPath $_.FullName -Recurse -Force }
+        Where-Object { -not (Get-ChildItem -LiteralPath $_.FullName -Recurse -File | Where-Object { $_.Extension -in '.flac', '.m4a', '.mp3' }) } | ForEach-Object { Remove-Item -LiteralPath $_.FullName -Recurse -Force }
     "Grupos resueltos: $hechos"
 }
