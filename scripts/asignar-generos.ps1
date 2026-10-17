@@ -1,6 +1,7 @@
 ﻿# Calcula el/los generos de cada artista (MusicBrainz + genero que ya traia el archivo + ajustes manuales)
 # y, con -Aplicar, escribe SOLO la etiqueta GENRE en los FLAC (metaflac; audio, letras y demas etiquetas intactas).
 param([switch]$Aplicar)
+. "$PSScriptRoot\progreso.ps1"
 $dir = (Join-Path $env:USERPROFILE 'reportes-musica')
 $mf = Get-Content "$dir\metaflac-path.txt"
 
@@ -60,11 +61,12 @@ $sinGenero.Keys | Sort-Object | Set-Content "$dir\artistas-sin-genero.txt" -Enco
 if ($Aplicar) {
     $ok = 0; $mal = @()
     foreach ($p in $plan) {
+        $ya = @(& $mf --show-tag=GENRE $p.ruta | ForEach-Object { $_.Substring(6) }); if (($ya -join '|') -eq ($p.generos -join '|')) { $ok++; Progreso 'generos' ($ok + $mal.Count) $plan.Count @{ listas = $ok; problemas = $mal.Count }; continue }
         $antesTags = & $mf --export-tags-to=- $p.ruta | Where-Object { $_ -notmatch '^GENRE=' }
         $args2 = @('--preserve-modtime', '--remove-tag=GENRE') + ($p.generos | ForEach-Object { "--set-tag=GENRE=$_" }) + @($p.ruta)
         & $mf @args2
         $despTags = & $mf --export-tags-to=- $p.ruta | Where-Object { $_ -notmatch '^GENRE=' }
-        if ($LASTEXITCODE -ne 0 -or @(Compare-Object $antesTags $despTags).Count) { $mal += $p.ruta } else { $ok++ }
+        if ($LASTEXITCODE -ne 0 -or @(Compare-Object $antesTags $despTags).Count) { $mal += $p.ruta } else { $ok++ }; Progreso 'generos' ($ok + $mal.Count) $plan.Count @{ listas = $ok; problemas = $mal.Count }
     }
     "Escritos: $ok | con problemas: $($mal.Count)"; $mal
 }

@@ -1,9 +1,12 @@
 ﻿# Solo lectura: revisa la portada incrustada de cada FLAC (bloque PICTURE).
 # Reporta canciones SIN portada y con portada pequena (< 500 px), agrupadas por album.
 param([string]$Raiz = "D:\SpotiFLAC", [int]$MinPx = 500)
+. "$PSScriptRoot\progreso.ps1"
+$todos = @(Get-ChildItem $Raiz -Recurse -File -Filter *.flac); $n = 0
 $mf = Get-Content (Join-Path $env:USERPROFILE 'reportes-musica\metaflac-path.txt')
 $sin = @(); $chica = @(); $ok = 0
-foreach ($f in Get-ChildItem $Raiz -Recurse -File -Filter *.flac) {
+foreach ($f in $todos) {
+    $n++; Progreso 'portadas' $n $todos.Count @{ sin_portada = $sin.Count; pequenas = $chica.Count }
     $b = & $mf --list --block-type=PICTURE $f.FullName 2>$null
     $w = ($b | Where-Object { $_ -match '^\s*width:\s*(\d+)' } | ForEach-Object { [int]($_ -replace '\D', '') } | Measure-Object -Maximum).Maximum
     $rel = $f.FullName.Substring($Raiz.Length + 1)

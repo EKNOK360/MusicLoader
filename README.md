@@ -14,6 +14,8 @@ Skill de [Claude Code](https://claude.com/claude-code) para gestionar tu bibliot
 | 🎤 **Letras sincronizadas** | Agrega letras LRC desde LRCLIB, corrige las desincronizadas y salta las instrumentales. Solo acepta letras cuya duración coincide con la de tu archivo. |
 | 🖼️ **Portadas** | Revisa qué canciones no tienen portada o la tienen pequeña (menos de 500 px), agrupadas por álbum. |
 | 🩺 **Archivos sanos** | Decodifica todo el audio de cada FLAC para confirmar que ninguno esté dañado. |
+| 🛠️ **Mantenimiento completo** | Un solo comando revisa toda la biblioteca: acomoda, pone géneros, letras, metadatos y portadas, y reporta repetidas. |
+| 📊 **Vigilante de tareas** | Reporte con barras de progreso cada 15 min (o cada 100 archivos si son pocos) para cualquier revisión larga. Con Remote Control de Claude te llega también al **celular**. |
 | 👀 **Vigilante de descargas** | Reporte cada ~15 min: avance, canciones saltadas en orden de la lista, internet y espacio en disco. Al terminar acomoda todo. |
 | 🎵 **Playlists de Spotify** | Compara playlists y likes con tu disco, crea playlists "para descargar", reparte canciones por estilo (siempre en su playlist + `All`) y hace recomendaciones. |
 

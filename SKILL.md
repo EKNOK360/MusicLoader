@@ -44,7 +44,8 @@ Ejecutar siempre: `powershell -ExecutionPolicy Bypass -File "<script>" <args>`.
 
 | Letras **sincronizadas** (LRCLIB): agrega a las que no tienen, corrige las desincronizadas (desfase mediano > 0.75 s o tiempos después del final), salta instrumentales; solo acepta letras con duración ±2 s de la del archivo | `letras-sincronizadas.ps1` (análisis, guarda `letras-plan.xml`) / `-Aplicar` / `-Archivo copia.flac` (prueba) |
 | Portadas: canciones sin portada o con portada pequeña (< 500 px), por álbum | `revisar-portadas.ps1` |
-| Revisar que ningún FLAC esté dañado (decodifica todo el audio) | `flac.exe -t -s archivo.flac` en bucle (carpeta de metaflac) |
+| Revisar que ningún archivo esté dañado (FLAC: `flac -t`; MP3/M4A: ffmpeg decodifica todo) | `revisar-danos.ps1` |
+| **Mantenimiento completo** en un solo proceso: acomodar descargas pendientes → géneros → letras → metadatos → portadas → repetidas | `mantenimiento.ps1 [-EsperarArchivo salida.txt]` (en segundo plano; detalle en `reportes-musica\mantenimiento.log`) |
 
 **Letras:** solo sincronizadas (formato LRC `[mm:ss.xx]`). Antes de aplicar a todas, probar en una **copia** y pedir al usuario que la escuche en **MusicBee** (instalado; Ver → Letras) para confirmar la sincronización. Leer etiquetas con `metaflac --no-utf8-convert` y `[Console]::OutputEncoding = UTF8` (si no, las tildes salen mal y las búsquedas fallan). Las respuestas de LRCLIB se descargan con WebClient en UTF-8. Comprobar el audio con la huella SHA256 de los bytes después de los metadatos (muchos FLAC de SpotiFLAC no traen MD5).
 
@@ -62,5 +63,12 @@ Herramientas instaladas (winget): metaflac (`reportes-musica\metaflac-path.txt`)
 ## Descargas de otros programas (MP3, etc.)
 1. `completar-metadatos.ps1 -Raiz "<carpeta de descargas>"` → revisar plan → `-Aplicar` (así cada archivo tiene artista/álbum/título correctos). 2. `ordenar-por-etiquetas.ps1 -Origen "<carpeta de descargas>"` → `-Aplicar`. 3. Seguir con el mantenimiento completo.
 
+## Vigilante de tareas (revisiones largas)
+- Cada script de revisión llama a `progreso.ps1` y escribe `reportes-musica\tarea-<nombre>.json`.
+- `reporte-tarea.ps1` (correr con Monitor, re-armar al expirar) emite una línea `TAREA` **cada 15 min** si la tarea tiene ≥1000 archivos, o **cada 100 archivos** si tiene menos, y `TERMINADA` al final.
+- **Formato del reporte en el chat** (bonito y fácil de leer): título con emoji y hora (`## 🔍 Vigilante de tareas · 11:35 a.m.`), una tabla con una fila por tarea: emoji + nombre en negrita, barra de 20 bloques en código (`██████░░░░`) con el % en negrita, "N de total", fin estimado y contadores con ✅/⚠️; al final una nota corta 📝 con lo importante (problemas, qué sigue).
+- **Notificaciones al celular:** si el usuario no está frente a la PC, enviar `PushNotification` con cada reporte (una línea: tarea, %, problemas, fin estimado). Para que lleguen, Claude Code debe tener Remote Control activo (`/remote-control`, o `"remoteControlAtStartup": true` en `~/.claude/settings.json` para todas las sesiones) y la app Claude en el celular con notificaciones permitidas. Bloquear la PC (Win+L) no detiene nada; suspenderla sí.
+
 ## Mantenimiento completo ("revisa todo")
+Lo más simple: `mantenimiento.ps1` en segundo plano + Monitor con `reporte-tarea.ps1`. Pasos manuales equivalentes:
 1. Acomodar cualquier carpeta de descarga pendiente. 2. Verificar que todo esté en `Artista\Álbum\canción` (nivel 3), renombrar `_01`. 3. `duplicados.ps1`. 4. `buscar-generos.ps1` → `asignar-generos.ps1` (revisar los artistas sin género y clasificarlos en `generos-manual.txt`) → `-Aplicar`; M4A con `generos-m4a.ps1`. 5. `letras-sincronizadas.ps1` → revisar plan → `-Aplicar` (FLAC: agrega y corrige desincronizadas); `completar-metadatos.ps1` para MP3/M4A y para portadas o datos que falten. 6. `revisar-portadas.ps1`. 7. Resumen: total de canciones, sin género, con/sin letra sincronizada, sin portada, repetidas, espacio libre.

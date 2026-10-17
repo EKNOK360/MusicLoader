@@ -9,6 +9,7 @@
 # verifica que los bytes del audio y las demas etiquetas queden identicos. -Archivo x.flac: solo ese archivo.
 param([switch]$Aplicar, [string]$Archivo = "")
 $ErrorActionPreference = 'Stop'
+. "$PSScriptRoot\progreso.ps1"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $dir = (Join-Path $env:USERPROFILE 'reportes-musica')
 $mf = Get-Content "$dir\metaflac-path.txt"
@@ -47,9 +48,9 @@ function Buscar($art, $tit, $alb, $dur) {
     $v
 }
 function Valida($lrc, $dur) { $l = @(Lineas $lrc); $l.Count -ge 5 -and $l[-1].t -le $dur + 1 }
-function Desfase($vieja, $nueva) {  # mediana de (tiempo viejo - tiempo nuevo) en lineas con el mismo texto
-    $n = @{}; foreach ($l in Lineas $nueva) { if ($l.x.Length -ge 6 -and -not $n.ContainsKey($l.x)) { $n[$l.x] = $l.t } }
-    $d = @(foreach ($l in Lineas $vieja) { if ($n.ContainsKey($l.x)) { $l.t - $n[$l.x] } }) | Sort-Object
+function Desfase($vieja, $nueva) {  # mediana de (tiempo viejo - tiempo nuevo); cada linea se compara con su repeticion MAS CERCANA (coros)
+    $n = @{}; foreach ($l in Lineas $nueva) { if ($l.x.Length -ge 6) { if (-not $n.ContainsKey($l.x)) { $n[$l.x] = New-Object Collections.Generic.List[double] }; $n[$l.x].Add($l.t) } }
+    $d = @(foreach ($l in Lineas $vieja) { if ($n.ContainsKey($l.x)) { $tv = $l.t; ($n[$l.x] | Sort-Object { [Math]::Abs($tv - $_) } | Select-Object -First 1 | ForEach-Object { $tv - $_ }) } }) | Sort-Object
     if ($d.Count -lt 5) { return $null }
     $d[[int][Math]::Floor($d.Count / 2)]
 }
@@ -57,7 +58,7 @@ function Desfase($vieja, $nueva) {  # mediana de (tiempo viejo - tiempo nuevo) e
 $archivos = if ($Archivo) { @(Get-Item -LiteralPath $Archivo) } else { @(Get-ChildItem 'D:\SpotiFLAC' -Recurse -File -Filter *.flac) }
 $plan = @(); $res = [ordered]@{ agregar = 0; corregir = 0; bien = 0; instrumental = 0; sinLetra = 0; sinComparar = 0 }; $sinLetra = @(); $corregidas = @(); $i = 0
 foreach ($f in $archivos) {
-    $i++; if ($i % 100 -eq 0) { Write-Host "Avance: $i de $($archivos.Count) $(Get-Date -Format HH:mm)"; $cache | ConvertTo-Json -Depth 3 -Compress | Set-Content $cacheFile -Encoding utf8 }
+    $i++; Progreso 'letras-analisis' $i $archivos.Count @{ agregar = $res.agregar; corregir = $res.corregir; bien = $res.bien; instrumentales = $res.instrumental; sin_letra = $res.sinLetra }; if ($i % 100 -eq 0) { Write-Host "Avance: $i de $($archivos.Count) $(Get-Date -Format HH:mm)"; $cache | ConvertTo-Json -Depth 3 -Compress | Set-Content $cacheFile -Encoding utf8 }
     $actual = ((& $mf --no-utf8-convert --show-tag=LYRICS $f.FullName) -join "`n") -replace '^LYRICS=', ''
     $tieneSync = $actual -match '(?m)^\[\d+:\d+'
     $art = (Tag $f.FullName 'ARTIST') -split ',\s*|;\s*' | Select-Object -First 1
@@ -93,7 +94,7 @@ if ($Aplicar) {
         [IO.File]::WriteAllText($tmp, $x.lrc, (New-Object Text.UTF8Encoding $false))
         & $mf --preserve-modtime --remove-tag=LYRICS "--set-tag-from-file=LYRICS=$tmp" $p
         $lyr = (& $mf --show-tag=LYRICS $p) -join "`n"
-        if ($LASTEXITCODE -eq 0 -and $h -eq (HuellaAudio $p) -and $lyr -match '\[\d+:\d+' -and -not (Compare-Object @($antes) @(Etiquetas $p))) { $bien++ } else { $mal += $p }
+        if ($LASTEXITCODE -eq 0 -and $h -eq (HuellaAudio $p) -and $lyr -match '\[\d+:\d+' -and -not (Compare-Object @($antes) @(Etiquetas $p))) { $bien++ } else { $mal += $p }; Progreso 'letras-escribir' ($bien + $mal.Count) $plan.Count @{ escritas = $bien; problemas = $mal.Count }
     }
     "Letras escritas: $bien | con problemas: $($mal.Count)"; $mal
 }
