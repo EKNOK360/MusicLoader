@@ -43,7 +43,8 @@ Ejecutar siempre: `powershell -ExecutionPolicy Bypass -File "<script>" <args>`.
 | Géneros M4A/MP3 (propiedades de Windows + verificación cuadro a cuadro con ffprobe) | `generos-m4a.ps1 -Generos @{ 'Artista' = 'G1;G2' }` |
 
 | Letras **sincronizadas** (LRCLIB y, si no está, **NetEase Cloud Music**; módulo `lrc-fuentes.ps1`): agrega a las que no tienen, corrige las desincronizadas (desfase mediano > 0.75 s o tiempos después del final), salta instrumentales; solo acepta letras con duración ±2 s de la del archivo | `letras-sincronizadas.ps1` (análisis, guarda `letras-plan.xml`) / `-Aplicar` / `-Archivo copia.flac` (prueba) |
-| Portadas: canciones sin portada o con portada pequeña (< 500 px), por álbum | `revisar-portadas.ps1` |
+| Portadas: canciones sin portada o con portada pequeña (< 500 px), por álbum (mide la imagen real con ffprobe) | `revisar-portadas.ps1` |
+| Mejorar portadas pequeñas: cambia por la de iTunes (hasta 1200 px) **solo si es del mismo álbum exacto**; respaldo y verificación de audio/etiquetas | `mejorar-portadas.ps1` (plan) / `-Aplicar` |
 | Revisar que ningún archivo esté dañado (FLAC: `flac -t`; MP3/M4A: ffmpeg decodifica todo) | `revisar-danos.ps1` |
 | **Mantenimiento completo** en un solo proceso: acomodar descargas pendientes → géneros → letras → metadatos → portadas → repetidas | `mantenimiento.ps1 [-EsperarArchivo salida.txt]` (en segundo plano; detalle en `reportes-musica\mantenimiento.log`) |
 
