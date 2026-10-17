@@ -1,10 +1,10 @@
-﻿# Vigilante de TAREAS (revisiones largas: letras, generos, metadatos, danos, portadas...).
+﻿# Vigilante de TAREAS (revisiones largas: letras, generos, metadatos, danos, portadas...). Por defecto: una linea TAREA cada 10 min, INICIO/ERROR/TERMINADA al momento.
 # Lee reportes-musica\tarea-*.json (escritos por progreso.ps1) y emite una linea "TAREA ..." por tarea:
 #   - tareas grandes (>= 1000 archivos): cada 15 minutos
 #   - tareas chicas  (<  1000 archivos): cada 100 archivos
 # y una linea "TERMINADA ..." cuando una tarea llega al total. Termina solo cuando ya no queda ninguna activa.
 # Uso tipico: Monitor -> powershell -File reporte-tarea.ps1   (re-armar al expirar)
-param([int]$Minutos = 15, [int]$CadaArchivos = 100, [int]$Grande = 1000, [switch]$SoloEventos)  # -SoloEventos: solo INICIO / MITAD / ERROR / TERMINADA (la barra en vivo la dibuja el mod music-loader-vivo)
+param([int]$Minutos = 10, [int]$CadaArchivos = 100, [int]$Grande = 0, [switch]$SoloEventos)  # por defecto: reporte cada 10 min + aviso inmediato al terminar o con error
 [Console]::OutputEncoding = [Text.Encoding]::UTF8  # para que las barras se vean bien
 $dir = Join-Path $env:USERPROFILE 'reportes-musica'
 $ultHora = @{}; $ultCant = @{}; $vistas = @{}; $mitad = @{}; $malos = @{}; $arranque = Get-Date
@@ -29,7 +29,6 @@ function Linea($t, $pref) {
         $prob = ($t.datos.PSObject.Properties | Where-Object { $_.Name -in 'problemas', 'danados', 'saltadas' } | Measure-Object Value -Sum).Sum
         if ($prob -gt [int]$malos[$k]) { $malos[$k] = $prob; Linea $t 'ERROR' }
         if (-not $ultHora.ContainsKey($k)) { $ultHora[$k] = Get-Date; $ultCant[$k] = $t.hechos; Linea $t 'INICIO'; continue }
-        if (-not $mitad[$k] -and $t.total -and $t.hechos * 2 -ge $t.total) { $mitad[$k] = 1; Linea $t 'MITAD' }
         if ($SoloEventos) { continue }
         $toca = if ($t.total -ge $Grande) { ((Get-Date) - $ultHora[$k]).TotalMinutes -ge $Minutos } else { $t.hechos - $ultCant[$k] -ge $CadaArchivos }
         if ($toca) { $ultHora[$k] = Get-Date; $ultCant[$k] = $t.hechos; Linea $t 'TAREA' }

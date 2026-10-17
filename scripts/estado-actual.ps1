@@ -20,8 +20,9 @@ foreach ($f in Get-ChildItem $dir -Filter 'tarea-*.json' -ErrorAction SilentlyCo
     $cuenta = if ($t.total -le 10) { "Paso $($t.hechos + [int](-not $t.terminado)) de $($t.total)$(if ($t.datos.paso) { " ($($t.datos.paso))" })" } else { "$('{0:N0}' -f $t.hechos) de $('{0:N0}' -f $t.total) canciones" }
     $lineas = @("**$nom**", "``$barra`` **$pct%**", "- 🎵 $cuenta", "- 🕐 Inicio: $(Hora $ini)", "- 🏁 $(if ($t.terminado) { 'Terminó' } else { 'Fin estimado' }): $fin", "- 📌 Estado: $estado")
     if ($t.actual -and -not $t.terminado) { $lineas += "- ♪ Ahora: $($t.actual)" }
+    $dts = @($t.datos.PSObject.Properties | Where-Object { $_.Name -ne 'paso' } | ForEach-Object { "$($_.Name -replace '_', ' '): $($_.Value)" }); if ($dts) { $lineas += "- 📋 $($dts -join ' · ')" }
     $filas += [pscustomobject]@{ orden = [int]$t.terminado; txt = ($lineas -join "`n") + "`n" }
 }
-"## 🎵 Music Loader en vivo · $(Hora $ahora)"
+"## 🎵 Music Loader · $(Hora $ahora)"
 if (-not $filas) { 'Sin tareas en curso.'; return }
 ($filas | Sort-Object orden).txt
