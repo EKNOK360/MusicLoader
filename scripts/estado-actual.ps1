@@ -22,6 +22,6 @@ foreach ($f in Get-ChildItem $dir -Filter 'tarea-*.json' -ErrorAction SilentlyCo
     if ($t.actual -and -not $t.terminado) { $lineas += "- ♪ Ahora: $($t.actual)" }
     $filas += [pscustomobject]@{ orden = [int]$t.terminado; txt = ($lineas -join "`n") + "`n" }
 }
-"## 📊 Estado actual · $(Hora $ahora)"
+"## 🎵 Music Loader en vivo · $(Hora $ahora)"
 if (-not $filas) { 'Sin tareas en curso.'; return }
 ($filas | Sort-Object orden).txt
