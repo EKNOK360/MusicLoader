@@ -1,0 +1,7 @@
+﻿# datos personales y temporales (no se suben)
+*.json
+*.xml
+*.txt
+*.flac
+*.m4a
+
