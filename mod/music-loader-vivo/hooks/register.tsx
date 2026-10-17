@@ -85,25 +85,28 @@ export const register: Register = on => {
     const vistas = await read($, tareas)
     if (e.props.hasSurvey || vistas.length === 0) return next(e)
     const { Box, Text } = $.ui.resolve(e)
+    const enCurso = vistas.filter(v => !v.terminado).length
     return (
       <Box flexDirection="column">
-        {vistas.map(v => (
-          <Box key={v.tarea} flexDirection="column">
-            <Text>
-              <Text bold>{v.nombre.padEnd(20)}</Text>
-              <Text color={v.terminado ? 'success' : v.problemas ? 'error' : v.detenida > 60 ? 'warning' : 'claude'}>{barra(v.pct)}</Text>
-              <Text bold> {String(v.pct).padStart(3)}%</Text>
-              <Text dimColor>  canción {miles(v.hechos)} de {miles(v.total)}</Text>
-              {v.problemas ? <Text color="error">  ⚠ {v.problemas} con problema</Text> : null}
-            </Text>
-            <Text dimColor>
-              {'  '}inicio {v.inicio} · {v.terminado ? `terminó ${v.fin}` : `fin estimado ${v.fin} · ${v.porMin.toFixed(1)}/min`}
-              {v.detenida > 60 ? <Text color="warning"> · sin avanzar hace {Math.round(v.detenida / 60)} min</Text> : null}
-            </Text>
-            {v.actual ? <Text dimColor>{'  '}♪ {v.actual}</Text> : null}
-            {v.datos ? <Text dimColor>{'  '}{v.datos}</Text> : null}
-          </Box>
-        ))}
+        <Text bold color="claude">🎵 Music Loader en vivo · {enCurso ? `${enCurso} en curso` : 'todo listo'}</Text>
+        {vistas.map(v => {
+          const color = v.terminado ? (v.problemas ? 'warning' : 'success') : v.problemas ? 'error' : v.detenida > 60 ? 'warning' : 'claude'
+          const estado = v.terminado ? (v.problemas ? `⚠️ terminó con ${v.problemas} problema(s)` : '✅ terminó')
+            : v.problemas ? `⚠️ ${v.problemas} problema(s)` : v.detenida > 60 ? `🟡 sin avanzar hace ${Math.round(v.detenida / 60)} min` : '▶️ en curso'
+          const pasos = v.total <= 10
+          return (
+            <Box key={v.tarea} flexDirection="column" marginTop={1}>
+              <Text bold>{v.nombre}</Text>
+              <Text><Text color={color}>{barra(v.pct)}</Text><Text bold> {v.pct}%</Text></Text>
+              <Text dimColor>🎵 {pasos ? `Paso ${Math.min(v.total, v.hechos + (v.terminado ? 0 : 1))} de ${v.total}` : `${miles(v.hechos)} de ${miles(v.total)} canciones`}</Text>
+              <Text dimColor>🕐 Inicio: {v.inicio}</Text>
+              <Text dimColor>🏁 {v.terminado ? `Terminó: ${v.fin}` : `Fin estimado: ${v.fin}${pasos ? '' : ` · ${v.porMin.toFixed(1)}/min`}`}</Text>
+              <Text color={v.problemas ? 'error' : v.detenida > 60 && !v.terminado ? 'warning' : undefined} dimColor={!v.problemas && !(v.detenida > 60 && !v.terminado)}>📌 Estado: {estado}</Text>
+              {v.actual ? <Text dimColor>♪ Ahora: {v.actual}</Text> : null}
+              {v.datos && !pasos ? <Text dimColor>📋 {v.datos}</Text> : null}
+            </Box>
+          )
+        })}
       </Box>
     )
   })
