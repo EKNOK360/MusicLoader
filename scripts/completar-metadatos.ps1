@@ -49,7 +49,7 @@ $archivos = if ($Archivo) { @(Get-Item -LiteralPath $Archivo) } else { @(Get-Chi
 $campos = 'title', 'artist', 'album', 'album_artist', 'date', 'track', 'genre'
 $res = [ordered]@{ revisadas = 0; completas = 0; conCambios = 0; escritas = 0; problemas = 0 }; $detalle = @(); $tmp = Join-Path $env:TEMP 'musicloader'; New-Item -ItemType Directory -Force $tmp | Out-Null
 foreach ($f in $archivos) {
-    $res.revisadas++; Progreso 'metadatos' $res.revisadas $archivos.Count @{ completas = $res.completas; con_cambios = $res.conCambios; escritas = $res.escritas; problemas = $res.problemas }; if ($res.revisadas % 50 -eq 0) { Write-Host "Avance: $($res.revisadas) de $($archivos.Count)"; $cache | ConvertTo-Json -Depth 3 -Compress | Set-Content $cacheFile -Encoding utf8 }
+    $res.revisadas++; Progreso 'metadatos' $res.revisadas $archivos.Count @{ completas = $res.completas; con_cambios = $res.conCambios; escritas = $res.escritas; problemas = $res.problemas } $f.BaseName; if ($res.revisadas % 50 -eq 0) { Write-Host "Avance: $($res.revisadas) de $($archivos.Count)"; $cache | ConvertTo-Json -Depth 3 -Compress | Set-Content $cacheFile -Encoding utf8 }
     $i = Info $f.FullName; $t = $i.tags; $ext = $f.Extension.ToLower()
     if ($t['album_artist'] -eq $null -and $t['albumartist']) { $t['album_artist'] = $t['albumartist'] }
     # artista y titulo: de las etiquetas o del nombre "Artista - Titulo"

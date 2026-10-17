@@ -53,7 +53,7 @@ function Desfase($vieja, $nueva) {  # mediana de (tiempo viejo - tiempo nuevo); 
 $archivos = if ($Archivo) { @(Get-Item -LiteralPath $Archivo) } else { @(Get-ChildItem 'D:\SpotiFLAC' -Recurse -File -Filter *.flac) }
 $plan = @(); $res = [ordered]@{ agregar = 0; corregir = 0; bien = 0; instrumental = 0; sinLetra = 0; sinComparar = 0 }; $sinLetra = @(); $corregidas = @(); $i = 0
 foreach ($f in $archivos) {
-    $i++; Progreso 'letras-analisis' $i $archivos.Count @{ agregar = $res.agregar; corregir = $res.corregir; bien = $res.bien; instrumentales = $res.instrumental; sin_letra = $res.sinLetra }; if ($i % 100 -eq 0) { Write-Host "Avance: $i de $($archivos.Count) $(Get-Date -Format HH:mm)"; $cache | ConvertTo-Json -Depth 3 -Compress | Set-Content $cacheFile -Encoding utf8 }
+    $i++; Progreso 'letras-analisis' $i $archivos.Count @{ agregar = $res.agregar; corregir = $res.corregir; bien = $res.bien; instrumentales = $res.instrumental; sin_letra = $res.sinLetra } $f.BaseName; if ($i % 100 -eq 0) { Write-Host "Avance: $i de $($archivos.Count) $(Get-Date -Format HH:mm)"; $cache | ConvertTo-Json -Depth 3 -Compress | Set-Content $cacheFile -Encoding utf8 }
     $actual = ((& $mf --no-utf8-convert --show-tag=LYRICS $f.FullName) -join "`n") -replace '^LYRICS=', ''
     $tieneSync = $actual -match '(?m)^\[\d+:\d+'
     $art = (Tag $f.FullName 'ARTIST') -split ',\s*|;\s*' | Select-Object -First 1
@@ -89,7 +89,7 @@ if ($Aplicar) {
         [IO.File]::WriteAllText($tmp, $x.lrc, (New-Object Text.UTF8Encoding $false))
         & $mf --preserve-modtime --remove-tag=LYRICS "--set-tag-from-file=LYRICS=$tmp" $p
         $lyr = (& $mf --show-tag=LYRICS $p) -join "`n"
-        if ($LASTEXITCODE -eq 0 -and $h -eq (HuellaAudio $p) -and $lyr -match '\[\d+:\d+' -and -not (Compare-Object @($antes) @(Etiquetas $p))) { $bien++ } else { $mal += $p }; Progreso 'letras-escribir' ($bien + $mal.Count) $plan.Count @{ escritas = $bien; problemas = $mal.Count }
+        if ($LASTEXITCODE -eq 0 -and $h -eq (HuellaAudio $p) -and $lyr -match '\[\d+:\d+' -and -not (Compare-Object @($antes) @(Etiquetas $p))) { $bien++ } else { $mal += $p }; Progreso 'letras-escribir' ($bien + $mal.Count) $plan.Count @{ escritas = $bien; problemas = $mal.Count } ([IO.Path]::GetFileNameWithoutExtension($p))
     }
     "Letras escritas: $bien | con problemas: $($mal.Count)"; $mal
 }

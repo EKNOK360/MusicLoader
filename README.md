@@ -15,7 +15,7 @@ Skill de [Claude Code](https://claude.com/claude-code) para gestionar tu bibliot
 | 🖼️ **Portadas** | Revisa qué canciones no tienen portada o la tienen pequeña (menos de 500 px), agrupadas por álbum. |
 | 🩺 **Archivos sanos** | Decodifica todo el audio de cada FLAC para confirmar que ninguno esté dañado. |
 | 🛠️ **Mantenimiento completo** | Un solo comando revisa toda la biblioteca: acomoda, pone géneros, letras, metadatos y portadas, y reporta repetidas. |
-| 📊 **Vigilante de tareas** | Reporte con barras de progreso cada 15 min (o cada 100 archivos si son pocos) para cualquier revisión larga. Con Remote Control de Claude te llega también al **celular**. |
+| 📊 **Barra en vivo** | Encima del cuadro donde escribes, dentro del chat: barra por tarea con %, canción actual, "N de total", hora de inicio y **fin estimado que se corrige solo**. Avisos (también al **celular**) solo al empezar, a la mitad, al terminar o si hay un error. |
 | 👀 **Vigilante de descargas** | Reporte cada ~15 min: avance, canciones saltadas en orden de la lista, internet y espacio en disco. Al terminar acomoda todo. |
 | 🎵 **Playlists de Spotify** | Compara playlists y likes con tu disco, crea playlists "para descargar", reparte canciones por estilo (siempre en su playlist + `All`) y hace recomendaciones. |
 
@@ -52,6 +52,14 @@ Antes y después de cada cambio se verifica que **el audio, las letras, la porta
    (Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Recurse -Filter metaflac.exe | Select -First 1).FullName | Set-Content "$env:USERPROFILE\reportes-musica\metaflac-path.txt"
    (Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Recurse -Filter ffmpeg.exe   | Select -First 1).FullName | Set-Content "$env:USERPROFILE\reportes-musica\ffmpeg-path.txt"
    ```
+
+### Barra en vivo (opcional)
+En Claude Code:
+```
+/plugin marketplace add EKNOK360/MusicLoader
+/plugin install music-loader-vivo@musicloader
+```
+Luego abre `mod/music-loader-vivo/hooks/register.tsx` en la carpeta del plugin y cambia `TU_USUARIO` por tu usuario de Windows. Para recibir los avisos en el celular, activa Remote Control (`/remote-control`) y la app Claude.
 
 ## Uso
 

@@ -6,7 +6,7 @@ $todos = @(Get-ChildItem $Raiz -Recurse -File -Filter *.flac); $n = 0
 $mf = Get-Content (Join-Path $env:USERPROFILE 'reportes-musica\metaflac-path.txt')
 $sin = @(); $chica = @(); $ok = 0
 foreach ($f in $todos) {
-    $n++; Progreso 'portadas' $n $todos.Count @{ sin_portada = $sin.Count; pequenas = $chica.Count }
+    $n++; Progreso 'portadas' $n $todos.Count @{ sin_portada = $sin.Count; pequenas = $chica.Count } $f.BaseName
     $b = & $mf --list --block-type=PICTURE $f.FullName 2>$null
     $w = ($b | Where-Object { $_ -match '^\s*width:\s*(\d+)' } | ForEach-Object { [int]($_ -replace '\D', '') } | Measure-Object -Maximum).Maximum
     $rel = $f.FullName.Substring($Raiz.Length + 1)

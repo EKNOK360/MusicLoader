@@ -13,6 +13,6 @@ foreach ($x in $f) {
     $i++
     if ($x.Extension -eq '.flac') { $o = & $flac -t -s $x.FullName 2>&1; if ($LASTEXITCODE -ne 0) { $mal += "$($x.FullName) :: $(($o | Select-Object -Last 1))" } }
     else { $o = & $ff -v error -i $x.FullName -map 0:a -f null - 2>&1; if ($o) { $mal += "$($x.FullName) :: $(($o | Select-Object -First 1))" } }
-    Progreso 'danos' $i $f.Count @{ danados = $mal.Count }
+    Progreso 'danos' $i $f.Count @{ danados = $mal.Count } $x.BaseName
 }
 "REVISADOS: $($f.Count) | DANADOS: $($mal.Count)"; $mal

@@ -4,9 +4,10 @@
 #   - tareas chicas  (<  1000 archivos): cada 100 archivos
 # y una linea "TERMINADA ..." cuando una tarea llega al total. Termina solo cuando ya no queda ninguna activa.
 # Uso tipico: Monitor -> powershell -File reporte-tarea.ps1   (re-armar al expirar)
-param([int]$Minutos = 15, [int]$CadaArchivos = 100, [int]$Grande = 1000)
+param([int]$Minutos = 15, [int]$CadaArchivos = 100, [int]$Grande = 1000, [switch]$SoloEventos)  # -SoloEventos: solo INICIO / MITAD / ERROR / TERMINADA (la barra en vivo la dibuja el mod music-loader-vivo)
+[Console]::OutputEncoding = [Text.Encoding]::UTF8  # para que las barras se vean bien
 $dir = Join-Path $env:USERPROFILE 'reportes-musica'
-$ultHora = @{}; $ultCant = @{}; $vistas = @{}; $arranque = Get-Date
+$ultHora = @{}; $ultCant = @{}; $vistas = @{}; $mitad = @{}; $malos = @{}; $arranque = Get-Date
 $iconos = @{ danos = 'Revision de danos'; 'letras-analisis' = 'Analisis de letras'; 'letras-escribir' = 'Escribiendo letras'; generos = 'Generos'; metadatos = 'Metadatos'; portadas = 'Portadas'; mantenimiento = 'Mantenimiento completo' }
 function Barra($pct) { $n = [int][Math]::Round($pct / 5); ('█' * $n) + ('░' * (20 - $n)) }
 function Linea($t, $pref) {
@@ -25,7 +26,11 @@ function Linea($t, $pref) {
         $k = $t.tarea
         if ($t.terminado) { if (-not $vistas[$k]) { $vistas[$k] = 1; Linea $t 'TERMINADA' }; continue }
         $activas++
-        if (-not $ultHora.ContainsKey($k)) { $ultHora[$k] = Get-Date; $ultCant[$k] = $t.hechos; Linea $t 'TAREA'; continue }
+        $prob = ($t.datos.PSObject.Properties | Where-Object { $_.Name -in 'problemas', 'danados', 'saltadas' } | Measure-Object Value -Sum).Sum
+        if ($prob -gt [int]$malos[$k]) { $malos[$k] = $prob; Linea $t 'ERROR' }
+        if (-not $ultHora.ContainsKey($k)) { $ultHora[$k] = Get-Date; $ultCant[$k] = $t.hechos; Linea $t 'INICIO'; continue }
+        if (-not $mitad[$k] -and $t.total -and $t.hechos * 2 -ge $t.total) { $mitad[$k] = 1; Linea $t 'MITAD' }
+        if ($SoloEventos) { continue }
         $toca = if ($t.total -ge $Grande) { ((Get-Date) - $ultHora[$k]).TotalMinutes -ge $Minutos } else { $t.hechos - $ultCant[$k] -ge $CadaArchivos }
         if ($toca) { $ultHora[$k] = Get-Date; $ultCant[$k] = $t.hechos; Linea $t 'TAREA' }
     }
