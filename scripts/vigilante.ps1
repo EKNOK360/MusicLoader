@@ -3,6 +3,7 @@
 # Uso: vigilante.ps1  (lee la carpeta de reportes-musica\vigilar.txt, linea 2)
 $dir = (Join-Path $env:USERPROFILE 'reportes-musica'); $vig = @(Get-Content "$dir\vigilar.txt" -Encoding utf8)
 $src = Join-Path 'D:\SpotiFLAC' $vig[1]; $log = "$dir\progreso.txt"; $mov = "$dir\movidos-$($vig[1]).txt"
+Remove-Item $log -ErrorAction SilentlyContinue  # cada descarga empieza con registro limpio (si no, la velocidad mezcla descargas)
 while ($true) {
     $a = @(Get-ChildItem -LiteralPath $src -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -in '.flac', '.m4a', '.mp3' } | Where-Object { $_.Name -notlike '.spotiflac-*' })
     $nMov = if (Test-Path $mov) { @(Get-Content $mov -Encoding utf8 | Where-Object { $_ -match '\.(flac|m4a|mp3)$' }).Count } else { 0 }
