@@ -7,7 +7,8 @@
 # mas parecida), el ultimo tiempo no pasa el final y tiene >= 5 lineas con tiempo.
 # Sin -Aplicar: solo busca (guarda cache) y muestra el plan. Con -Aplicar: escribe SOLO la etiqueta LYRICS y
 # verifica que los bytes del audio y las demas etiquetas queden identicos. -Archivo x.flac: solo ese archivo.
-param([switch]$Aplicar, [string]$Archivo = "")
+param([switch]$Aplicar, [string]$Archivo = "", [string]$Raiz = "")  # -Raiz carpeta: solo esa carpeta
+if (-not $Raiz) { $cfg = Join-Path $env:USERPROFILE 'reportes-musica\config.json'; $Raiz = if (Test-Path $cfg) { (Get-Content $cfg -Raw | ConvertFrom-Json).raiz } else { 'D:\SpotiFLAC' } }
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\progreso.ps1"
 . "$PSScriptRoot\lrc-fuentes.ps1"
@@ -50,7 +51,7 @@ function Desfase($vieja, $nueva) {  # mediana de (tiempo viejo - tiempo nuevo); 
     $d[[int][Math]::Floor($d.Count / 2)]
 }
 
-$archivos = if ($Archivo) { @(Get-Item -LiteralPath $Archivo) } else { @(Get-ChildItem 'D:\SpotiFLAC' -Recurse -File -Filter *.flac) }
+$archivos = if ($Archivo) { @(Get-Item -LiteralPath $Archivo) } else { @(Get-ChildItem -LiteralPath $Raiz -Recurse -File -Filter *.flac) }
 $plan = @(); $res = [ordered]@{ agregar = 0; corregir = 0; bien = 0; instrumental = 0; sinLetra = 0; sinComparar = 0 }; $sinLetra = @(); $corregidas = @(); $i = 0
 foreach ($f in $archivos) {
     $i++; Progreso 'letras-analisis' $i $archivos.Count @{ agregar = $res.agregar; corregir = $res.corregir; bien = $res.bien; instrumentales = $res.instrumental; sin_letra = $res.sinLetra } $f.BaseName; if ($i % 100 -eq 0) { Write-Host "Avance: $i de $($archivos.Count) $(Get-Date -Format HH:mm)"; $cache | ConvertTo-Json -Depth 3 -Compress | Set-Content $cacheFile -Encoding utf8 }

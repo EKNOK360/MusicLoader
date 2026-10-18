@@ -1,6 +1,7 @@
 ﻿# Calcula el/los generos de cada artista (MusicBrainz + genero que ya traia el archivo + ajustes manuales)
 # y, con -Aplicar, escribe SOLO la etiqueta GENRE en los FLAC (metaflac; audio, letras y demas etiquetas intactas).
-param([switch]$Aplicar)
+param([switch]$Aplicar, [string]$Raiz = "")  # -Raiz carpeta: solo esa carpeta (p. ej. una descarga nueva)
+if (-not $Raiz) { $cfg = Join-Path $env:USERPROFILE 'reportes-musica\config.json'; $Raiz = if (Test-Path $cfg) { (Get-Content $cfg -Raw | ConvertFrom-Json).raiz } else { 'D:\SpotiFLAC' } }
 . "$PSScriptRoot\progreso.ps1"
 $dir = (Join-Path $env:USERPROFILE 'reportes-musica')
 $mf = Get-Content "$dir\metaflac-path.txt"
@@ -43,7 +44,7 @@ $mb = @{}; (Get-Content "$dir\mb-generos.json" -Raw -Encoding utf8 | ConvertFrom
 $manual = @{}; if (Test-Path "$dir\generos-manual.txt") { Get-Content "$dir\generos-manual.txt" -Encoding utf8 | Where-Object { $_ -match '\|' } | ForEach-Object { $a, $g = $_ -split '\|', 2; $manual[$a.Trim()] = @($g -split ';' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) } }
 
 $plan = @(); $sinGenero = @{}
-foreach ($f in Get-ChildItem 'D:\SpotiFLAC' -Recurse -File -Filter *.flac) {
+foreach ($f in Get-ChildItem -LiteralPath $Raiz -Recurse -File -Filter *.flac) {
     $art = (($f.BaseName -split ' - ', 2)[0] -split ',\s*')[0].Trim()
     $actual = @(& $mf --show-tag=GENRE $f.FullName | ForEach-Object { $_.Substring(6) } | ForEach-Object { $_ -split '\s*/\s*|;\s*' } | Where-Object { $_ -and $_ -notmatch 'billboard' })
     $g = if ($manual.ContainsKey($art)) { $manual[$art] } else {
