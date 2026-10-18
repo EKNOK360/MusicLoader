@@ -58,6 +58,7 @@ foreach ($l in Get-Content $Lista -Encoding utf8 | Where-Object { $_ -match '\|'
                 if ($puestas -ge $n) { break }
                 $c = "$(Norm $art)|$(Base $t.name)"
                 if ($tengo.Contains($c) -or $enPl.Contains($c)) { continue }
+                $x = $t; if ($x.artists.name | Where-Object { $tengo.Contains("$(Norm $_)|$(Base $x.name)") }) { continue }  # la tienes con otro artista principal
                 $agregadas += [pscustomobject]@{ Genero = $gen; Texto = "$($t.artists[0].name) - $($t.name)"; Uri = $t.uri }
                 [void]$enPl.Add($c); $puestas++
             }
@@ -69,7 +70,8 @@ foreach ($l in Get-Content $Lista -Encoding utf8 | Where-Object { $_ -match '\|'
     if ($tit.StartsWith('?')) {
         try {
             $res = @((Api Get "/search?type=track&limit=10&q=$([uri]::EscapeDataString($tit.TrimStart('?') + ' ' + $art))").tracks.items | Where-Object { $_ -and ($_.artists.name | Where-Object { MismoArtista $_ $art }) })
-            $t = $res | Where-Object { -not $enPl.Contains("$(Norm $art)|$(Base $_.name)") } | Select-Object -First 1
+            $t = $res | Where-Object { $b = Base $_.name; -not $enPl.Contains("$(Norm $art)|$b") -and -not ($_.artists.name | Where-Object { $tengo.Contains("$(Norm $_)|$b") }) } | Select-Object -First 1
+            if (-not $t -and @($res | Where-Object { $tengo.Contains("$(Norm $art)|$(Base $_.name)") })) { $yaTenia += "$art - $tit (descargada)"; continue }
             if ($t) { $agregadas += [pscustomobject]@{ Genero = $gen; Texto = "$(($t.artists.name | Select-Object -First 2) -join ', ') - $($t.name)"; Uri = $t.uri }; [void]$enPl.Add("$(Norm $art)|$(Base $t.name)") }
             else { $noHalladas += "$art - $tit" }
         } catch { $noHalladas += "$art - $tit (error: $($_.Exception.Message))" }
