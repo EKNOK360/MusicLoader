@@ -38,9 +38,9 @@ function Lineas($lrc) {  # -> lista de @{t=segundos; x=texto normalizado}
 }
 function Buscar($art, $tit, $alb, $dur) {  # LRCLIB y, si no hay, NetEase (ver lrc-fuentes.ps1). Cache por cancion.
     $k = "$art|$tit|$([int]$dur)"
-    if ($cache.ContainsKey($k) -and ($cache[$k].lrc -or $cache[$k].inst -or $cache[$k].v2)) { return $cache[$k] }
+    if ($cache.ContainsKey($k) -and $cache[$k].v3) { return $cache[$k] }  # v3 = busqueda estricta (mismo artista y titulo)
     $r = BuscarLetra $art $tit $alb $dur
-    $v = [pscustomobject]@{ lrc = $r.lrc; fuente = $r.fuente; inst = $r.inst; v2 = $true }
+    $v = [pscustomobject]@{ lrc = $r.lrc; fuente = $r.fuente; inst = $r.inst; v3 = $true }
     $cache[$k] = $v; Start-Sleep -Milliseconds 250
     $v
 }function Valida($lrc, $dur) { $l = @(Lineas $lrc); $l.Count -ge 5 -and $l[-1].t -le $dur + 1 }
@@ -50,36 +50,69 @@ function Desfase($vieja, $nueva) {  # mediana de (tiempo viejo - tiempo nuevo); 
     if ($d.Count -lt 5) { return $null }
     $d[[int][Math]::Floor($d.Count / 2)]
 }
+function Parecido($a, $b) {  # 0..1: pares de letras en comun (sirve en cualquier idioma); la misma letra da > 0.5, otra cancion < 0.2
+    $x = @{}; $y = @{}
+    $ta = (Norm ($a -replace '\[[^\]]*\]', '')); $tb = (Norm ($b -replace '\[[^\]]*\]', ''))
+    for ($i = 0; $i -lt $ta.Length - 1; $i++) { $x[$ta.Substring($i, 2)] = 1 }
+    for ($i = 0; $i -lt $tb.Length - 1; $i++) { $y[$tb.Substring($i, 2)] = 1 }
+    if (-not $x.Count -or -not $y.Count) { return 0 }
+    $c = @($x.Keys | Where-Object { $y.ContainsKey($_) }).Count
+    $c / ($x.Count + $y.Count - $c)
+}
+$py = if (Test-Path "$dir\python-path.txt") { Get-Content "$dir\python-path.txt" } else { '' }
+function NoLatina($s) { "$s" -match '[぀-ヿ㐀-鿿가-힯]' }
+function Romanizar($lrc) {  # japones/coreano -> letras latinas (romaji), sin traducir; ver romanizar.py
+    if (-not (NoLatina $lrc) -or -not $py) { return $lrc }
+    $e = Join-Path $env:TEMP 'rom-in.lrc'; $s = Join-Path $env:TEMP 'rom-out.lrc'
+    [IO.File]::WriteAllText($e, $lrc, (New-Object Text.UTF8Encoding $false))
+    & $py "$PSScriptRoot\romanizar.py" $e $s
+    if ($LASTEXITCODE -ne 0) { return $lrc }
+    [IO.File]::ReadAllText($s, [Text.Encoding]::UTF8)
+}
 
 $archivos = if ($Archivo) { @(Get-Item -LiteralPath $Archivo) } else { @(Get-ChildItem -LiteralPath $Raiz -Recurse -File -Filter *.flac) }
-$plan = @(); $res = [ordered]@{ agregar = 0; corregir = 0; bien = 0; instrumental = 0; sinLetra = 0; sinComparar = 0 }; $sinLetra = @(); $corregidas = @(); $i = 0
+$plan = @(); $res = [ordered]@{ agregar = 0; corregir = 0; equivocada = 0; romaji = 0; bien = 0; instrumental = 0; sinLetra = 0; sinComparar = 0 }; $sinLetra = @(); $corregidas = @(); $sinVerificar = @(); $i = 0
 foreach ($f in $archivos) {
-    $i++; Progreso 'letras-analisis' $i $archivos.Count @{ agregar = $res.agregar; corregir = $res.corregir; bien = $res.bien; instrumentales = $res.instrumental; sin_letra = $res.sinLetra } $f.BaseName; if ($i % 100 -eq 0) { Write-Host "Avance: $i de $($archivos.Count) $(Get-Date -Format HH:mm)"; $cache | ConvertTo-Json -Depth 3 -Compress | Set-Content $cacheFile -Encoding utf8 }
+    $i++; Progreso 'letras-analisis' $i $archivos.Count @{ agregar = $res.agregar; corregir = $res.corregir; equivocadas = $res.equivocada; romaji = $res.romaji; bien = $res.bien; sin_verificar = $res.sinComparar; sin_letra = $res.sinLetra } $f.BaseName; if ($i % 100 -eq 0) { Write-Host "Avance: $i de $($archivos.Count) $(Get-Date -Format HH:mm)"; $cache | ConvertTo-Json -Depth 3 -Compress | Set-Content $cacheFile -Encoding utf8 }
     $actual = ((& $mf --no-utf8-convert --show-tag=LYRICS $f.FullName) -join "`n") -replace '^LYRICS=', ''
     $tieneSync = $actual -match '(?m)^\[\d+:\d+'
     $art = (Tag $f.FullName 'ARTIST') -split ',\s*|;\s*' | Select-Object -First 1
     $tit = Tag $f.FullName 'TITLE'; $alb = Tag $f.FullName 'ALBUM'; $dur = Duracion $f.FullName
     $r = Buscar $art $tit $alb $dur
     $ok = $r.lrc -and (Valida $r.lrc $dur)
+    $cand = if ($ok) { Romanizar $r.lrc } else { '' }
     if (-not $tieneSync) {
-        if ($ok) { $plan += [pscustomobject]@{ f = $f.FullName; lrc = $r.lrc; tipo = 'agregar' }; $res.agregar++ }
+        if ($ok) { $plan += [pscustomobject]@{ f = $f.FullName; lrc = $cand; tipo = 'agregar' }; $res.agregar++ }
         elseif ($r.inst) { $res.instrumental++ } else { $res.sinLetra++; $sinLetra += "$art - $tit" }
         continue
     }
     $l = @(Lineas $actual)
     $pasaFinal = $l.Count -and $l[-1].t -gt $dur + 1
-    if (-not $ok) { if ($pasaFinal) { $corregidas += "SIN ARREGLO (no hay version buena en LRCLIB): $art - $tit" }; $res.sinComparar++; continue }
-    $d = Desfase $actual $r.lrc
-    if ($pasaFinal -or ($null -ne $d -and [Math]::Abs($d) -gt 0.75)) {
-        $plan += [pscustomobject]@{ f = $f.FullName; lrc = $r.lrc; tipo = 'corregir' }; $res.corregir++
+    if (-not $ok) {  # no hay fuente de la MISMA cancion para comprobarla
+        $tituloEnLetra = (Norm ($actual -replace '\[[^\]]*\]', '')).Contains((Norm ($tit -replace '\(.*?\)|\[.*?\]| - .*$', '')))
+        $sinVerificar += [pscustomobject]@{ f = $f.FullName; nombre = "$art - $tit"; dudosa = (-not $tituloEnLetra); spotiflac = ($actual -match '\[by:SpotiFLAC') }
+        if (NoLatina $actual) { $plan += [pscustomobject]@{ f = $f.FullName; lrc = (Romanizar $actual); tipo = 'romaji' }; $res.romaji++ }
+        if ($pasaFinal) { $corregidas += "SIN ARREGLO (no hay version buena): $art - $tit" }; $res.sinComparar++; continue
+    }
+    $actualR = Romanizar $actual  # se comparan las dos ya en letras latinas
+    $p = Parecido $actualR $cand
+    $d = Desfase $actualR $cand
+    if ($p -lt 0.3) {
+        $plan += [pscustomobject]@{ f = $f.FullName; lrc = $cand; tipo = 'equivocada' }; $res.equivocada++
+        $corregidas += "{0} - {1}  (letra de OTRA cancion: parecido {2:P0})" -f $art, $tit, $p
+    } elseif ($pasaFinal -or ($null -ne $d -and [Math]::Abs($d) -gt 0.75)) {
+        $plan += [pscustomobject]@{ f = $f.FullName; lrc = $cand; tipo = 'corregir' }; $res.corregir++
         $corregidas += "{0} - {1}  ({2})" -f $art, $tit, $(if ($pasaFinal) { 'tiempos pasan del final' } else { 'desfase {0:+0.0;-0.0} s' -f $d })
-    } else { $res.bien++ }
+    } elseif (NoLatina $actual) { $plan += [pscustomobject]@{ f = $f.FullName; lrc = $actualR; tipo = 'romaji' }; $res.romaji++ }
+    else { $res.bien++ }
 }
 $cache | ConvertTo-Json -Depth 3 -Compress | Set-Content $cacheFile -Encoding utf8
 $plan | Export-Clixml "$dir\letras-plan.xml"
+$sinVerificar | Export-Clixml "$dir\letras-sin-verificar.xml"
 "Revisadas: $($archivos.Count) | " + (($res.GetEnumerator() | ForEach-Object { "$($_.Key): $($_.Value)" }) -join ' | ')
 "--- a corregir:"; $corregidas
 "--- sin letra disponible (primeras 40):"; $sinLetra | Select-Object -First 40
+"--- DUDOSAS (sin fuente para comprobar y el titulo no aparece en la letra): $(@($sinVerificar | Where-Object dudosa).Count)"; $sinVerificar | Where-Object dudosa | ForEach-Object { "$($_.nombre)$(if ($_.spotiflac) { '  [puesta por SpotiFLAC]' })" }
 
 if ($Aplicar) {
     $bien = 0; $mal = @(); $tmp = Join-Path $env:TEMP 'letra.lrc'

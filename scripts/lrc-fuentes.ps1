@@ -18,10 +18,18 @@ function LrcValida($lrc, $dur) {
     $u = $m[$m.Count - 1]; ([int]$u.Groups[1].Value * 60 + [double]$u.Groups[2].Value) -le $dur + 1
 }
 function BuscarLrclib($art, $tit, $alb, $dur) {
-    $c = @()
-    try { $g = LrcJson "https://lrclib.net/api/get?artist_name=$([uri]::EscapeDataString($art))&track_name=$([uri]::EscapeDataString($tit))&album_name=$([uri]::EscapeDataString($alb))&duration=$([int][Math]::Round($dur))"; if ($g) { $c += $g } } catch { }
+    $c = @(); $g = $null
+    try { $g = LrcJson "https://lrclib.net/api/get?artist_name=$([uri]::EscapeDataString($art))&track_name=$([uri]::EscapeDataString($tit))&album_name=$([uri]::EscapeDataString($alb))&duration=$([int][Math]::Round($dur))"; if ($g) { $g | Add-Member deGet $true; $c += $g } } catch { }
     try { $c += @(LrcJson "https://lrclib.net/api/search?artist_name=$([uri]::EscapeDataString($art))&track_name=$([uri]::EscapeDataString($tit))") } catch { }
-    $c = @($c | ForEach-Object { $_ } | Where-Object { $_ -and $_.duration })
+    # solo la MISMA cancion: titulo y artista deben coincidir (no basta con que dure lo mismo).
+    # /api/get ya busca por artista+titulo+album exactos, asi que su resultado se acepta aunque el titulo venga en otra escritura.
+    $nt = LrcNorm $tit; $na = LrcNorm $art
+    function Misma($x) {
+        $t = LrcNorm $x.trackName; $a = LrcNorm $x.artistName
+        if (-not ($nt -and $na -and $t -and $a)) { return $false }
+        ($t -eq $nt -or $t.Contains($nt) -or $nt.Contains($t)) -and ($a.Contains($na) -or $na.Contains($a))
+    }
+    $c = @($c | ForEach-Object { $_ } | Where-Object { $_ -and $_.duration -and ($_.PSObject.Properties['deGet'] -or (Misma $_)) })
     $inst = [bool]($c | Where-Object { $_.instrumental -and [Math]::Abs([double]$_.duration - $dur) -le 2 })
     $b = $c | Where-Object { $_.syncedLyrics -and [Math]::Abs([double]$_.duration - $dur) -le 2 -and (LrcValida $_.syncedLyrics $dur) } | Sort-Object { [Math]::Abs([double]$_.duration - $dur) } | Select-Object -First 1
     [pscustomobject]@{ lrc = $(if ($b) { $b.syncedLyrics } else { '' }); fuente = 'LRCLIB'; inst = $inst }
@@ -30,7 +38,7 @@ function BuscarNetease($art, $tit, $dur) {
     try {
         $r = LrcJson "https://music.163.com/api/search/get?type=1&limit=10&s=$([uri]::EscapeDataString("$art $tit"))" 'https://music.163.com/'
         $nt = LrcNorm $tit; $na = LrcNorm $art
-        $songs = @($r.result.songs | Where-Object { $_ -and [Math]::Abs([double]$_.duration / 1000 - $dur) -le 2 -and ((LrcNorm $_.name) -eq $nt -or (LrcNorm $_.name).Contains($nt)) -and (@($_.artists | Where-Object { (LrcNorm $_.name).Contains($na) -or $na.Contains((LrcNorm $_.name)) }).Count) } |
+        $songs = @($r.result.songs | Where-Object { $_ -and $nt -and $na -and [Math]::Abs([double]$_.duration / 1000 - $dur) -le 2 -and ((LrcNorm $_.name) -eq $nt -or (LrcNorm $_.name).Contains($nt)) -and (@($_.artists | Where-Object { (LrcNorm $_.name).Contains($na) -or $na.Contains((LrcNorm $_.name)) }).Count) } |
             Sort-Object { [Math]::Abs([double]$_.duration / 1000 - $dur) })
         foreach ($s in $songs | Select-Object -First 3) {
             Start-Sleep -Milliseconds 400
