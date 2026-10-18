@@ -1,6 +1,6 @@
 ﻿# 1) Quita canciones repetidas de la playlist.  2) Agrega las recomendaciones de recomendaciones.txt
 # (formato Genero|Artista|Titulo) que no tengas ya descargadas ni esten en la playlist.
-param([string]$Nombre = "Por recuperar", [string]$Raiz = "D:\SpotiFLAC", [string]$Lista = "$PSScriptRoot\recomendaciones.txt", [string]$TambienEn = "")
+param([string]$Nombre = "Por recuperar", [string]$Raiz = "D:\SpotiFLAC", [string]$Lista = "$PSScriptRoot\recomendaciones.txt", [string]$TambienEn = "", [switch]$Repartir)
 . "$PSScriptRoot\spotify-auth.ps1" -Scopes "playlist-read-private playlist-modify-private playlist-modify-public"
 
 function Base($s) {
@@ -100,6 +100,18 @@ if ($TambienEn -and $uris.Count) {
     $id2 = ((Api Get "/me/playlists?limit=50").items | Where-Object { $_.name -eq $TambienEn } | Select-Object -First 1).id
     for ($i = 0; $i -lt $uris.Count; $i += 100) { $null = Api Post "/playlists/$id2/items" @{ uris = @($uris[$i..([Math]::Min($i + 99, $uris.Count - 1))]) } }
     "Tambien agregadas a ${TambienEn}: $($uris.Count)"
+}
+# -Repartir: cada recomendacion tambien va a la playlist que dice su columna Genero y a All
+if ($Repartir -and $uris.Count) {
+    $mias = (Api Get "/me/playlists?limit=50").items
+    foreach ($g in @($agregadas | Group-Object Genero) + [pscustomobject]@{ Name = 'All'; Group = $agregadas }) {
+        $dest = @($mias | Where-Object name -eq $g.Name)
+        if ($dest.Count -ne 1) { "No reparti '$($g.Name)': hay $($dest.Count) playlists con ese nombre"; continue }
+        $ya = @{}; foreach ($t in LeerPlaylist $dest[0].id) { $ya[$t.uri] = 1; $ya["$(Norm $t.artists[0].name)|$(Base $t.name)"] = 1 }
+        $u = @($g.Group | Where-Object { -not $ya[$_.Uri] -and -not $ya["$(Norm ($_.Texto -split ' - ', 2)[0])|$(Base ($_.Texto -split ' - ', 2)[1])"] } | ForEach-Object { $_.Uri } | Select-Object -Unique)
+        for ($i = 0; $i -lt $u.Count; $i += 100) { $null = Api Post "/playlists/$($dest[0].id)/items" @{ uris = @($u[$i..([Math]::Min($i + 99, $u.Count - 1))]) } }
+        "Repartidas a $($g.Name): $($u.Count)"
+    }
 }
 $rep = @("REPETIDAS QUITADAS ($($repetidas.Count)):") + $repetidas + "" + "RECOMENDACIONES AGREGADAS ($($uris.Count)):"
 foreach ($g in $agregadas | Group-Object Genero) { $rep += "-- $($g.Name) --"; $rep += $g.Group.Texto }
