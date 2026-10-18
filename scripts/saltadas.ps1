@@ -4,11 +4,11 @@ function NormS($s) { if (-not $s) { return '' }; ($s.Normalize([Text.Normalizati
 $script:vig = @(Get-Content "$env:USERPROFILE\reportes-musica\vigilar.txt" -Encoding utf8); $script:lista = if ($script:vig.Count -gt 2 -and $script:vig[2]) { @(@(Get-Content $script:vig[2] -Raw -Encoding utf8 | ConvertFrom-Json) | ForEach-Object { $_ }) } else { @((@(Get-Content "$env:USERPROFILE\reportes-musica\playlists.json" -Raw -Encoding utf8 | ConvertFrom-Json) | ForEach-Object { $_ } | Where-Object nombre -eq $script:vig[0]).canciones) }
 function Saltadas {
     $tengo = New-Object 'Collections.Generic.HashSet[string]'
-    Get-ChildItem -LiteralPath (Join-Path "D:\SpotiFLAC" $script:vig[1]) -Recurse -File | Where-Object { $_.Extension -in '.flac', '.m4a', '.mp3' } | ForEach-Object {
+    Get-ChildItem -LiteralPath $(if ([IO.Path]::IsPathRooted($script:vig[1])) { $script:vig[1] } else { Join-Path "D:\SpotiFLAC" $script:vig[1] }) -Recurse -File | Where-Object { $_.Extension -in '.flac', '.m4a', '.mp3' } | ForEach-Object {
         $p = $_.BaseName -split ' - ', 2
         foreach ($a in $p[0] -split ',\s*') { [void]$tengo.Add("$(NormS $a)|$(NormS $p[1])") }
     }
-    if (Test-Path "$env:USERPROFILE\reportes-musica\movidos-$($script:vig[1]).txt") { Get-Content "$env:USERPROFILE\reportes-musica\movidos-$($script:vig[1]).txt" -Encoding utf8 | ForEach-Object { $p = [IO.Path]::GetFileNameWithoutExtension($_) -split ' - ', 2; foreach ($a in $p[0] -split ',\s*') { [void]$tengo.Add("$(NormS $a)|$(NormS $p[1])") } } }
+    if (Test-Path "$env:USERPROFILE\reportes-musica\movidos-$(Split-Path $script:vig[1] -Leaf).txt") { Get-Content "$env:USERPROFILE\reportes-musica\movidos-$(Split-Path $script:vig[1] -Leaf).txt" -Encoding utf8 | ForEach-Object { $p = [IO.Path]::GetFileNameWithoutExtension($_) -split ' - ', 2; foreach ($a in $p[0] -split ',\s*') { [void]$tengo.Add("$(NormS $a)|$(NormS $p[1])") } } }
     $usadas = New-Object 'Collections.Generic.HashSet[string]'
     $ok = @(); for ($i = 0; $i -lt $script:lista.Count; $i++) {
         $t = $script:lista[$i]; $k = "$(NormS (($t.a -split ', ')[0]))|$(NormS $t.n)"

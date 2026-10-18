@@ -2,7 +2,8 @@
 # y termina (imprime TERMINADO) cuando pasan 20 min sin canciones nuevas y no quedan temporales.
 # Uso: vigilante.ps1  (lee la carpeta de reportes-musica\vigilar.txt, linea 2)
 $dir = (Join-Path $env:USERPROFILE 'reportes-musica'); $vig = @(Get-Content "$dir\vigilar.txt" -Encoding utf8)
-$src = Join-Path 'D:\SpotiFLAC' $vig[1]; $log = "$dir\progreso.txt"; $mov = "$dir\movidos-$($vig[1]).txt"
+$src = if ([IO.Path]::IsPathRooted($vig[1])) { $vig[1] } else { Join-Path 'D:\SpotiFLAC' $vig[1] }  # ruta completa = descarga fuera de la biblioteca
+ $log = "$dir\progreso.txt"; $mov = "$dir\movidos-$(Split-Path $vig[1] -Leaf).txt"
 Remove-Item $log -ErrorAction SilentlyContinue  # cada descarga empieza con registro limpio (si no, la velocidad mezcla descargas)
 while ($true) {
     $a = @(Get-ChildItem -LiteralPath $src -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -in '.flac', '.m4a', '.mp3' } | Where-Object { $_.Name -notlike '.spotiflac-*' })
