@@ -28,8 +28,20 @@ function HuellaAudio($f) {  # SHA256 de todo lo que va despues de los bloques de
         [BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash($s))
     } finally { $s.Close() }
 }
-function Tag($f, $k) { (& $mf --no-utf8-convert "--show-tag=$k" $f | Select-Object -First 1) -replace "^$k=", '' }
-function Duracion($f) { [double](& $mf --show-total-samples $f) / [double](& $mf --show-sample-rate $f) }
+$ffm = Get-Content "$dir\ffmpeg-path.txt"; $ffp = Join-Path (Split-Path $ffm) 'ffprobe.exe'
+function EsM4a($f) { $f -like '*.m4a' }
+function Tag($f, $k) {
+    if (EsM4a $f) { return (& $ffp -v error -show_entries "format_tags=$($k.ToLower())" -of default=nw=1:nk=1 $f | Select-Object -First 1) }
+    (& $mf --no-utf8-convert "--show-tag=$k" $f | Select-Object -First 1) -replace "^$k=", ''
+}
+function Duracion($f) {
+    if (EsM4a $f) { return [double](& $ffp -v error -show_entries format=duration -of default=nw=1:nk=1 $f) }
+    [double](& $mf --show-total-samples $f) / [double](& $mf --show-sample-rate $f)
+}
+function LeerLetra($f) {  # M4A: con mutagen (letra-m4a.py); FLAC: etiqueta LYRICS
+    if (EsM4a $f) { $o = [Console]::OutputEncoding; try { return ((& $py "$PSScriptRoot\letra-m4a.py" leer $f) -join "`n") } finally { [Console]::OutputEncoding = $o } }
+    ((& $mf --no-utf8-convert --show-tag=LYRICS $f) -join "`n") -replace '^LYRICS=', ''
+}
 function Norm($s) { ($s.Normalize([Text.NormalizationForm]::FormD) -replace '\p{Mn}', '').ToLower() -replace '[^\p{L}\p{N}]', '' }
 function Lineas($lrc) {  # -> lista de @{t=segundos; x=texto normalizado}
     foreach ($m in [regex]::Matches("$lrc", '(?m)^\[(\d+):(\d+(?:\.\d+)?)\](.*)$')) {
@@ -70,11 +82,11 @@ function Romanizar($lrc) {  # japones/coreano -> letras latinas (romaji), sin tr
     [IO.File]::ReadAllText($s, [Text.Encoding]::UTF8)
 }
 
-$archivos = if ($Archivo) { @(Get-Item -LiteralPath $Archivo) } else { @(Get-ChildItem -LiteralPath $Raiz -Recurse -File -Filter *.flac) }
+$archivos = if ($Archivo) { @(Get-Item -LiteralPath $Archivo) } else { @(Get-ChildItem -LiteralPath $Raiz -Recurse -File | Where-Object { $_.Extension -in '.flac', '.m4a' }) }
 $plan = @(); $res = [ordered]@{ agregar = 0; corregir = 0; equivocada = 0; romaji = 0; bien = 0; instrumental = 0; sinLetra = 0; sinComparar = 0 }; $sinLetra = @(); $corregidas = @(); $sinVerificar = @(); $i = 0
 foreach ($f in $archivos) {
     $i++; Progreso 'letras-analisis' $i $archivos.Count @{ agregar = $res.agregar; corregir = $res.corregir; equivocadas = $res.equivocada; romaji = $res.romaji; bien = $res.bien; sin_verificar = $res.sinComparar; sin_letra = $res.sinLetra } $f.BaseName; if ($i % 100 -eq 0) { Write-Host "Avance: $i de $($archivos.Count) $(Get-Date -Format HH:mm)"; $cache | ConvertTo-Json -Depth 3 -Compress | Set-Content $cacheFile -Encoding utf8 }
-    $actual = ((& $mf --no-utf8-convert --show-tag=LYRICS $f.FullName) -join "`n") -replace '^LYRICS=', ''
+    $actual = LeerLetra $f.FullName
     $tieneSync = $actual -match '(?m)^\[\d+:\d+'
     $art = (Tag $f.FullName 'ARTIST') -split ',\s*|;\s*' | Select-Object -First 1
     $tit = Tag $f.FullName 'TITLE'; $alb = Tag $f.FullName 'ALBUM'; $dur = Duracion $f.FullName
@@ -119,6 +131,18 @@ if ($Aplicar) {
     function Etiquetas($f) { & $mf --export-tags-to=- $f | Where-Object { $_ -match '^[A-Za-z0-9_ ]+=' -and $_ -notmatch '^LYRICS=' } }
     foreach ($x in $plan) {
         $p = $x.f
+        if (EsM4a $p) {  # M4A: solo el atomo de la letra; se verifica que el audio decodificado y las demas etiquetas no cambien
+            $md5 = { param($q) (& $ffm -v error -i $q -map 0:a -f md5 - 2>$null) -join '' }
+            $tags = { param($q) (& $ffp -v error -show_entries format_tags -of json $q | ConvertFrom-Json).format.tags.PSObject.Properties | Where-Object Name -notmatch 'lyric' | ForEach-Object { "$($_.Name)=$($_.Value)" } }
+            $pics = { param($q) @(& $ffp -v error -select_streams v -show_entries stream=index -of csv=p=0 $q).Count }
+            $bk = Join-Path $env:TEMP ([IO.Path]::GetFileName($p)); Copy-Item -LiteralPath $p $bk -Force
+            $a1 = & $md5 $p; $t1 = & $tags $p; $c1 = & $pics $p; $mt = (Get-Item -LiteralPath $p).LastWriteTime
+            [IO.File]::WriteAllText($tmp, $x.lrc, (New-Object Text.UTF8Encoding $false))
+            & $py "$PSScriptRoot\letra-m4a.py" escribir $p $tmp
+            if ($LASTEXITCODE -eq 0 -and $a1 -and $a1 -eq (& $md5 $p) -and -not (Compare-Object @($t1) @(& $tags $p)) -and $c1 -eq (& $pics $p) -and (LeerLetra $p) -match '\[\d+:\d+') { (Get-Item -LiteralPath $p).LastWriteTime = $mt; $bien++; Remove-Item $bk }
+            else { Copy-Item $bk -LiteralPath $p -Force; $mal += $p }
+            Progreso 'letras-escribir' ($bien + $mal.Count) $plan.Count @{ escritas = $bien; problemas = $mal.Count } ([IO.Path]::GetFileNameWithoutExtension($p)); continue
+        }
         $antes = Etiquetas $p; $h = HuellaAudio $p
         [IO.File]::WriteAllText($tmp, $x.lrc, (New-Object Text.UTF8Encoding $false))
         & $mf --preserve-modtime --remove-tag=LYRICS "--set-tag-from-file=LYRICS=$tmp" $p

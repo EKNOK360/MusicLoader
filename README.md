@@ -31,7 +31,7 @@ Antes y después de cada cambio se verifica que **el audio, las letras, la porta
   winget install Xiph.FLAC      # metaflac: etiquetas FLAC
   winget install Gyan.FFmpeg    # ffprobe: verificación de M4A
   winget install Python.Python.3.12   # para el romaji
-  python -m pip install pykakasi korean-romanizer
+  python -m pip install cutlet fugashi unidic-lite korean-romanizer mutagen
   ```
 - Para las funciones de Spotify: una app propia en [developer.spotify.com](https://developer.spotify.com/dashboard) con:
   - Redirect URI: `http://127.0.0.1:8888/callback`
