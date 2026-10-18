@@ -70,9 +70,10 @@ function Desfase($vieja, $nueva) {  # mediana de (tiempo viejo - tiempo nuevo); 
 function Palabras($a) { $h = @{}; foreach ($w in ((($a -replace '\[[^\]]*\]', '').Normalize([Text.NormalizationForm]::FormD) -replace '\p{Mn}', '').ToLower() -split '[^\p{L}\p{N}]+')) { if ($w.Length -ge 2) { $h[$w] = 1 } }; $h }
 function Parecido($a, $b) {  # 0..1: palabras en comun (las dos ya en letras latinas). Medido: misma cancion ~0.76, otra cancion <= 0.11
     $x = Palabras $a; $y = Palabras $b
-    if (-not $x.Count -or -not $y.Count) { return 0 }
+    $nx = $x.Keys.Count; $ny = $y.Keys.Count  # .Keys.Count: si la letra trae la palabra "count", $x.Count devolveria ESE valor
+    if (-not $nx -or -not $ny) { return 0 }
     $c = @($x.Keys | Where-Object { $y.ContainsKey($_) }).Count
-    $c / ($x.Count + $y.Count - $c)
+    $c / ($nx + $ny - $c)
 }
 $py = if (Test-Path "$dir\python-path.txt") { Get-Content "$dir\python-path.txt" } else { '' }
 function NoLatina($s) { "$s" -match '[぀-ヿ㐀-鿿가-힯]' }
