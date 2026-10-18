@@ -1,6 +1,6 @@
 ﻿# Cada 15 min imprime avance, velocidad de descarga de canciones, hora estimada
 # y velocidad de internet (promedio y pico, bajada/subida, medida cada 10 s).
-. "$PSScriptRoot\saltadas.ps1"; $log = "$env:USERPROFILE\reportes-musica\progreso.txt"; $total = $script:lista.Count; $cada = 10; $periodo = 870
+. "$PSScriptRoot\saltadas.ps1"; $log = "$env:USERPROFILE\reportes-musica\progreso.txt"; $total = $script:lista.Count; $cada = 10; $periodo = 570
 function Bytes { $s = Get-NetAdapter | Where-Object Status -eq 'Up' | Get-NetAdapterStatistics; [pscustomobject]@{ rx = ($s | Measure-Object ReceivedBytes -Sum).Sum; tx = ($s | Measure-Object SentBytes -Sum).Sum } }
 function Mbps($bytes, $seg) { $bytes * 8 / 1e6 / $seg }
 function Linea($bajProm, $subProm, $bajPico, $subPico) {

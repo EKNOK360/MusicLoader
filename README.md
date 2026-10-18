@@ -1,4 +1,4 @@
-# MusicLoader
+﻿# MusicLoader
 
 Skill de [Claude Code](https://claude.com/claude-code) para gestionar tu biblioteca de música (**FLAC, MP3 o M4A**) descargada con **SpotiFLAC o con cualquier otro descargador**, y organizar tus playlists de **Spotify**. Le hablas a Claude en lenguaje normal ("revisa mi música", "vigila la descarga", "ponles letra") y la skill sabe qué hacer.
 
@@ -70,4 +70,4 @@ Cada vez que un script se conecta a Spotify se abre el navegador: haz clic en **
 
 - Las apps de Spotify en *modo desarrollo* solo pueden leer **tus propias playlists**; para una de otra persona, cópiala a una tuya. Las búsquedas tienen un máximo de 10 resultados, y si se hacen demasiadas Spotify puede bloquear la app por unas horas.
 - Los datos (cachés, reglas de géneros, progreso) se guardan en `%USERPROFILE%\reportes-musica\` y **no** se suben al repositorio.
-- Las reglas para repartir por estilo (`scripts/repartir-playlists.ps1`) usan los nombres de playlists del autor (Random, Pop & More, Old songs, Rock & Phonk, Reggae, Classical, All); ajústalas a las tuyas.
+- Las reglas para repartir por estilo (`scripts/repartir-playlists.ps1`) usan los nombres de playlists del autor (Random, Pop & More, Old songs, Rock & Phonk, Reggae & Dancehall, Classical, All); ajústalas a las tuyas.
