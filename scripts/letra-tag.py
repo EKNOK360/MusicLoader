@@ -3,8 +3,20 @@
 #      python letra-tag.py escribir archivo x.lrc -> pone la letra de x.lrc
 import sys
 
+#      python letra-tag.py titulo-leer archivo / titulo-escribir archivo x.txt  -> lo mismo con el titulo
 modo, ruta = sys.argv[1], sys.argv[2]
-nueva = open(sys.argv[3], encoding='utf-8').read() if modo == 'escribir' else None
+nueva = open(sys.argv[3], encoding='utf-8').read() if modo.endswith('escribir') else None
+
+if modo.startswith('titulo'):
+    from mutagen.mp3 import EasyMP3
+    from mutagen.easymp4 import EasyMP4
+    m = EasyMP3(ruta) if ruta.lower().endswith('.mp3') else EasyMP4(ruta)
+    if modo == 'titulo-leer':
+        sys.stdout.buffer.write(''.join(m.get('title', [''])).encode('utf-8'))
+    else:
+        m['title'] = [nueva.strip()]
+        m.save()
+    sys.exit(0)
 
 if ruta.lower().endswith('.mp3'):
     from mutagen.id3 import ID3, USLT, ID3NoHeaderError

@@ -6,8 +6,28 @@ import re, sys
 import cutlet
 from korean_romanizer.romanizer import Romanizer
 
+import os
 kat = cutlet.Cutlet()                # Hepburn
-kat.use_foreign_spelling = False     # katakana como se pronuncia, no "corregido" al ingles
+kat.use_foreign_spelling = True      # palabras de otro idioma en katakana van en su idioma: シャンデリア -> chandelier
+# lecturas especiales que el diccionario no conoce (titulos con lectura propia). Se pueden agregar mas en
+# %USERPROFILE%\reportes-musica\romaji-manual.txt, una por linea:  original|romaji
+MANUAL = {'紅蓮華': 'Gurenge', '唱': 'Show'}
+_m = os.path.join(os.environ.get('USERPROFILE', ''), 'reportes-musica', 'romaji-manual.txt')
+if os.path.exists(_m):
+    for _l in open(_m, encoding='utf-8'):
+        if '|' in _l:
+            _o, _r = _l.rstrip('\n').split('|', 1); MANUAL[_o.strip()] = _r.strip()
+MAN = re.compile('|'.join(sorted(map(re.escape, MANUAL), key=len, reverse=True))) if MANUAL else None
+
+def japones(s):  # las lecturas manuales se respetan; lo demas pasa por cutlet
+    if not MAN:
+        return kat.romaji(s)
+    out, i = [], 0
+    for m in MAN.finditer(s):
+        if s[i:m.start()].strip(): out.append(kat.romaji(s[i:m.start()]))
+        out.append(MANUAL[m.group(0)]); i = m.end()
+    if s[i:].strip(): out.append(kat.romaji(s[i:]))
+    return ' '.join(out)
 JA = re.compile(r'[぀-ヿ㐀-鿿ｦ-ﾟ]')
 KO = re.compile(r'[가-힯ᄀ-ᇿ㄰-㆏]+')
 TAG = re.compile(r'^((?:\[[^\]]*\])*)(.*)$')
@@ -16,7 +36,7 @@ def texto(s):
     if KO.search(s):
         s = KO.sub(lambda m: Romanizer(m.group(0)).romanize(), s)
     if JA.search(s):
-        s = kat.romaji(s.replace('　', ' '))
+        s = japones(s.replace('　', ' '))
     return s
 
 def lrc(t):
@@ -27,6 +47,8 @@ if sys.argv[1:] == ['--prueba']:
     assert r.startswith('[00:01.00]Yoru ni kakeru'), r
     assert '[00:02.00]Hello world' in r and '[00:03.00]saranghae' in r, r
     assert '[00:04.00]Tadashisa to wa orokasa to wa' in r, r
+    assert lrc('[00:05.00]ギラギラ光るシャンデリア') == '[00:05.00]Giragira hikaru chandelier', lrc('[00:05.00]ギラギラ光るシャンデリア')
+    assert lrc('紅蓮華') == 'Gurenge' and lrc('唱') == 'Show', (lrc('紅蓮華'), lrc('唱'))
     print('prueba OK')
 else:
     ent = open(sys.argv[1], encoding='utf-8').read()
