@@ -1,6 +1,6 @@
 ﻿# Vigilante de TAREAS (revisiones largas: letras, generos, metadatos, danos, portadas...). Por defecto: una linea TAREA cada 10 min, INICIO/ERROR/TERMINADA al momento.
 # Lee reportes-musica\tarea-*.json (escritos por progreso.ps1) y emite una linea "TAREA ..." por tarea:
-#   - tareas grandes (>= 1000 archivos): cada 15 minutos
+#   - tareas grandes (>= 1000 archivos): cada 10 minutos
 #   - tareas chicas  (<  1000 archivos): cada 100 archivos
 # y una linea "TERMINADA ..." cuando una tarea llega al total. Termina solo cuando ya no queda ninguna activa.
 # Uso tipico: Monitor -> powershell -File reporte-tarea.ps1   (re-armar al expirar)
@@ -24,7 +24,8 @@ function Linea($t, $pref) {
         try { $t = Get-Content $f.FullName -Raw | ConvertFrom-Json } catch { continue }
         if ([datetime]$t.actualizado -lt $arranque.AddHours(-12)) { continue }   # tareas viejas
         $k = $t.tarea
-        if ($t.terminado) { if (-not $vistas[$k]) { $vistas[$k] = 1; Linea $t 'TERMINADA' }; continue }
+        # las tareas que ya habian terminado antes de arrancar no cuentan (si no, el vigilante se cierra al instante)
+        if ($t.terminado) { if (-not $vistas[$k] -and [datetime]$t.actualizado -ge $arranque) { $vistas[$k] = 1; Linea $t 'TERMINADA' }; continue }
         $activas++
         $prob = ($t.datos.PSObject.Properties | Where-Object { $_.Name -in 'problemas', 'danados', 'saltadas' } | Measure-Object Value -Sum).Sum
         if ($prob -gt [int]$malos[$k]) { $malos[$k] = $prob; Linea $t 'ERROR' }

@@ -1,4 +1,4 @@
-﻿# MusicLoader
+# MusicLoader
 
 Skill de [Claude Code](https://claude.com/claude-code) para gestionar tu biblioteca de música (**FLAC, MP3 o M4A**) descargada con **SpotiFLAC o con cualquier otro descargador**, y organizar tus playlists de **Spotify**. Le hablas a Claude en lenguaje normal ("revisa mi música", "vigila la descarga", "ponles letra") y la skill sabe qué hacer.
 
@@ -16,7 +16,7 @@ Skill de [Claude Code](https://claude.com/claude-code) para gestionar tu bibliot
 | 🩺 **Archivos sanos** | Decodifica todo el audio de cada FLAC para confirmar que ninguno esté dañado. |
 | 🛠️ **Mantenimiento completo** | Un solo comando revisa toda la biblioteca: acomoda, pone géneros, letras, metadatos y portadas, y reporta repetidas. |
 | 📊 **Vigilante de tareas** | Reporte en el chat **cada 10 minutos** (y al empezar, terminar o si hay un error) con barra, canciones, hora de inicio, fin estimado, canción actual y contadores. Con Remote Control de Claude también llega al **celular**. |
-| 👀 **Vigilante de descargas** | Reporte cada ~15 min: avance, canciones saltadas en orden de la lista, internet y espacio en disco. Al terminar acomoda todo. |
+| 👀 **Vigilante de descargas** | Reporte cada 10 min: avance, canciones saltadas en orden de la lista, internet y espacio en disco. Al terminar acomoda todo. |
 | 🎵 **Playlists de Spotify** | Compara playlists y likes con tu disco, crea playlists "para descargar", reparte canciones por estilo (siempre en su playlist + `All`) y hace recomendaciones. |
 
 Antes y después de cada cambio se verifica que **el audio, las letras, la portada y las demás etiquetas** queden idénticos.
