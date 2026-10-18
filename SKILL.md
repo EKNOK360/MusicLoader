@@ -18,6 +18,8 @@ Ejecutar siempre: `powershell -ExecutionPolicy Bypass -File "<script>" <args>`.
 - Versiones: preferir **estudio/álbum**; evitar en vivo, remix, sped up, AI y soundscapes, salvo que el usuario las pida.
 - Antes de borrar archivos o playlists: mirar el objetivo y borrar solo lo que el usuario pidió. Mover a respaldo cuando se pueda. **Repetidas: nunca borrar sin que el usuario lo ordene después de ver el cuadro comparativo.**
 - Editar metadatos **solo** la etiqueta pedida (género o letra); verificar que audio, letras, portada y demás etiquetas queden idénticos. Probar primero en una copia.
+**Al comparar playlists con el disco:** los descargadores recortan nombres largos (música clásica), así que antes de dar una canción por "no descargada" buscar también por el comienzo del título (coincidencia por prefijo). La playlist de reggae se llama "Reggae & Dancehall".
+
 ## Spotify (app propia del usuario en modo desarrollo; login PKCE en `spotify-auth.ps1`, Client ID en `reportes-musica\spotify-client-id.txt`)
 - Cada script con Spotify abre el navegador: **avisar al usuario que haga clic en Aceptar**. Correr en segundo plano.
 - Límites: búsqueda `limit` máx. **10**; solo se pueden leer playlists **propias** (las de otros dan 403: pedir al usuario que la copie a una suya con ⋯ → Agregar a otra playlist → Nueva playlist); si hay error 429 con espera larga (>15 min) el script se detiene: esperar, no crear otra app.
