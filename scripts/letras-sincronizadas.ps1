@@ -7,7 +7,8 @@
 # mas parecida), el ultimo tiempo no pasa el final y tiene >= 5 lineas con tiempo.
 # Sin -Aplicar: solo busca (guarda cache) y muestra el plan. Con -Aplicar: escribe SOLO la etiqueta LYRICS y
 # verifica que los bytes del audio y las demas etiquetas queden identicos. -Archivo x.flac: solo ese archivo.
-param([switch]$Aplicar, [string]$Archivo = "", [string]$Raiz = "")  # -Raiz carpeta: solo esa carpeta
+param([switch]$Aplicar, [string]$Archivo = "", [string]$Raiz = "", [switch]$ConLrc)  # -Raiz carpeta: solo esa carpeta
+# -ConLrc: ademas deja un .lrc al lado de CADA cancion con letra sincronizada (reproductores sencillos solo leen el .lrc)
 if (-not $Raiz) { $cfg = Join-Path $env:USERPROFILE 'reportes-musica\config.json'; $Raiz = if (Test-Path $cfg) { (Get-Content $cfg -Raw | ConvertFrom-Json).raiz } else { 'D:\SpotiFLAC' } }
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\progreso.ps1"
@@ -157,4 +158,15 @@ if ($Aplicar) {
         if ($LASTEXITCODE -eq 0 -and $h -eq (HuellaAudio $p) -and $lyr -match '\[\d+:\d+' -and -not (Compare-Object @($antes) @(Etiquetas $p))) { $bien++ } else { $mal += $p }; Progreso 'letras-escribir' ($bien + $mal.Count) $plan.Count @{ escritas = $bien; problemas = $mal.Count } ([IO.Path]::GetFileNameWithoutExtension($p))
     }
     "Letras escritas: $bien | con problemas: $($mal.Count)"; $mal
+}
+if ($ConLrc) {
+    $n = 0
+    foreach ($f in $archivos) {
+        $l = LeerLetra $f.FullName
+        if ($l -notmatch '(?m)^\[\d+:\d+') { continue }
+        $lrc = [IO.Path]::ChangeExtension($f.FullName, '.lrc')
+        if ((Test-Path -LiteralPath $lrc) -and [IO.File]::ReadAllText($lrc, [Text.Encoding]::UTF8) -eq $l) { continue }
+        [IO.File]::WriteAllText($lrc, $l, (New-Object Text.UTF8Encoding $false)); $n++
+    }
+    "Archivos .lrc escritos al lado de las canciones: $n"
 }
