@@ -31,8 +31,13 @@ if ruta.lower().endswith('.mp3'):
         sys.stdout.buffer.write((u[0].text if u else '').encode('utf-8'))
     else:
         t.delall('USLT')
-        t.add(USLT(encoding=3, lang='und', desc='', text=nueva))
-        t.save(ruta, v2_version=t.version[1] if t.version[1] in (3, 4) else 4)
+        # reproductores viejos: ID3v2.3 con la letra en Latin-1 (el "ANSI" clasico); si no cabe (japones...), UTF-16
+        try:
+            nueva.encode('latin-1'); cod = 0
+        except UnicodeEncodeError:
+            cod = 1
+        t.add(USLT(encoding=cod, lang='spa', desc='', text=nueva))
+        t.save(ruta, v2_version=3)
 else:
     from mutagen.mp4 import MP4
     m = MP4(ruta)

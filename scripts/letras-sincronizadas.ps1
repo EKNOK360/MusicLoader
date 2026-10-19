@@ -7,7 +7,9 @@
 # mas parecida), el ultimo tiempo no pasa el final y tiene >= 5 lineas con tiempo.
 # Sin -Aplicar: solo busca (guarda cache) y muestra el plan. Con -Aplicar: escribe SOLO la etiqueta LYRICS y
 # verifica que los bytes del audio y las demas etiquetas queden identicos. -Archivo x.flac: solo ese archivo.
-param([switch]$Aplicar, [string]$Archivo = "", [string]$Raiz = "", [switch]$ConLrc)  # -Raiz carpeta: solo esa carpeta
+param([switch]$Aplicar, [string]$Archivo = "", [string]$Raiz = "", [switch]$ConLrc, [ValidateSet('', 'moderno', 'viejito')][string]$Reproductor = '')  # -Raiz carpeta: solo esa carpeta
+# -Reproductor: codificacion de los .lrc. viejito = ANSI (Windows-1252; los reproductores sencillos muestran "dÃ­a" con UTF-8),
+#   moderno = UTF-8. Sin indicarlo: los .lrc de MP3 van en ANSI y los de FLAC/M4A en UTF-8.
 # -ConLrc: ademas deja un .lrc al lado de CADA cancion con letra sincronizada (reproductores sencillos solo leen el .lrc)
 if (-not $Raiz) { $cfg = Join-Path $env:USERPROFILE 'reportes-musica\config.json'; $Raiz = if (Test-Path $cfg) { (Get-Content $cfg -Raw | ConvertFrom-Json).raiz } else { 'D:\SpotiFLAC' } }
 $ErrorActionPreference = 'Stop'
@@ -39,11 +41,25 @@ function Duracion($f) {
     if (EsM4a $f) { return [double](& $ffp -v error -show_entries format=duration -of default=nw=1:nk=1 $f) }
     [double](& $mf --show-total-samples $f) / [double](& $mf --show-sample-rate $f)
 }
+function CodLrc($audio) { if ($Reproductor -eq 'viejito') { 'ansi' } elseif ($Reproductor -eq 'moderno') { 'utf8' } elseif ($audio -like '*.mp3') { 'ansi' } else { 'utf8' } }
+function LeerLrc($p) {  # detecta como esta guardado un .lrc: BOM UTF-8, UTF-8 valido o ANSI
+    $b = [IO.File]::ReadAllBytes($p)
+    if ($b.Length -ge 3 -and $b[0] -eq 0xEF -and $b[1] -eq 0xBB -and $b[2] -eq 0xBF) { return [Text.Encoding]::UTF8.GetString($b, 3, $b.Length - 3) }
+    try { (New-Object Text.UTF8Encoding $false, $true).GetString($b) } catch { [Text.Encoding]::GetEncoding(1252).GetString($b) }
+}
+function EscribirLrc($audio, $texto) {  # .lrc al lado del audio, en ANSI o UTF-8 segun CodLrc; si no cabe en ANSI (p. ej. japones), UTF-8 con BOM
+    $p = [IO.Path]::ChangeExtension($audio, '.lrc')
+    if ((CodLrc $audio) -eq 'ansi') {
+        try { [IO.File]::WriteAllBytes($p, [Text.Encoding]::GetEncoding(1252, [Text.EncoderFallback]::ExceptionFallback, [Text.DecoderFallback]::ExceptionFallback).GetBytes($texto)); return }
+        catch { [IO.File]::WriteAllText($p, $texto, (New-Object Text.UTF8Encoding $true)); return }
+    }
+    [IO.File]::WriteAllText($p, $texto, (New-Object Text.UTF8Encoding $false))
+}
 function LeerLetra($f) {  # M4A: con mutagen (letra-tag.py); FLAC: etiqueta LYRICS
     if (EsM4a $f) {
         $l = (& $py "$PSScriptRoot\letra-tag.py" leer $f) -join "`n"
         $lrc = [IO.Path]::ChangeExtension($f, '.lrc')  # MP3: muchos reproductores usan el .lrc de al lado
-        if ($l -notmatch '\[\d+:\d+' -and (Test-Path -LiteralPath $lrc)) { $l = [IO.File]::ReadAllText($lrc, [Text.Encoding]::UTF8) }
+        if ($l -notmatch '\[\d+:\d+' -and (Test-Path -LiteralPath $lrc)) { $l = LeerLrc $lrc }
         return $l
     }
     ((& $mf --no-utf8-convert --show-tag=LYRICS $f) -join "`n") -replace '^LYRICS=', ''
@@ -146,7 +162,7 @@ if ($Aplicar) {
             & $py "$PSScriptRoot\letra-tag.py" escribir $p $tmp
             if ($LASTEXITCODE -eq 0 -and $a1 -and $a1 -eq (& $md5 $p) -and -not (Compare-Object @($t1) @(& $tags $p)) -and $c1 -eq (& $pics $p) -and (LeerLetra $p) -match '\[\d+:\d+') {
                 (Get-Item -LiteralPath $p).LastWriteTime = $mt; $bien++; Remove-Item $bk
-                if ($p -like '*.mp3') { [IO.File]::WriteAllText([IO.Path]::ChangeExtension($p, '.lrc'), $x.lrc, (New-Object Text.UTF8Encoding $false)) }  # y el .lrc al lado
+                if ($p -like '*.mp3') { EscribirLrc $p $x.lrc }  # y el .lrc al lado (ANSI por defecto en MP3)
             }
             else { Copy-Item $bk -LiteralPath $p -Force; $mal += $p }
             Progreso 'letras-escribir' ($bien + $mal.Count) $plan.Count @{ escritas = $bien; problemas = $mal.Count } ([IO.Path]::GetFileNameWithoutExtension($p)); continue
@@ -165,9 +181,9 @@ if ($ConLrc) {
         $l = LeerLetra $f.FullName
         if ($l -notmatch '(?m)^\[\d+:\d+') { continue }
         $lrc = [IO.Path]::ChangeExtension($f.FullName, '.lrc')
-        if ((Test-Path -LiteralPath $lrc) -and [IO.File]::ReadAllText($lrc, [Text.Encoding]::UTF8) -eq $l) { continue }
-        [IO.File]::WriteAllText($lrc, $l, (New-Object Text.UTF8Encoding $false)); $n++
+        if ((Test-Path -LiteralPath $lrc) -and -not $Reproductor -and (LeerLrc $lrc) -eq $l) { continue }  # con -Reproductor se reescribe para dejar la codificacion pedida
+        EscribirLrc $f.FullName $l; $n++
     }
     "Archivos .lrc escritos al lado de las canciones: $n"
-    "(Si el reproductor muestra 'dÃ­a' en vez de 'día', pasarlos a ANSI con convertir-lrc.ps1 -Codificacion ansi)"
+    "(Para cambiar la codificacion de .lrc que ya existen: convertir-lrc.ps1 -Codificacion ansi|utf8)"
 }

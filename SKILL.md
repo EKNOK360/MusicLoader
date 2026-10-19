@@ -74,3 +74,8 @@ Herramientas instaladas (winget): metaflac (`reportes-musica\metaflac-path.txt`)
 ## Mantenimiento completo ("revisa todo")
 Lo más simple: `mantenimiento.ps1` en segundo plano + Monitor con `reporte-tarea.ps1`. Pasos manuales equivalentes:
 1. Acomodar cualquier carpeta de descarga pendiente. 2. Verificar que todo esté en `Artista\Álbum\canción` (nivel 3), renombrar `_01`. 3. `duplicados.ps1`. 4. `buscar-generos.ps1` → `asignar-generos.ps1` (revisar los artistas sin género y clasificarlos en `generos-manual.txt`) → `-Aplicar`; M4A con `generos-m4a.ps1`. 5. `letras-sincronizadas.ps1` → revisar plan → `-Aplicar` (FLAC: agrega y corrige desincronizadas); `completar-metadatos.ps1` para MP3/M4A y para portadas o datos que falten. 6. `revisar-portadas.ps1`. 7. Resumen: total de canciones, sin género, con/sin letra sincronizada, sin portada, repetidas, espacio libre.
+
+
+## Letras en reproductores viejitos
+- Si el usuario dice que su reproductor es **viejito/sencillo** (o ve `dÃ­a` en vez de `día`): `letras-sincronizadas.ps1 -Raiz <carpeta> -Aplicar -ConLrc -Reproductor viejito` (los `.lrc` en ANSI). Si es **moderno**: `-Reproductor moderno` (UTF-8). Sin indicarlo: `.lrc` de MP3 en ANSI y de FLAC/M4A en UTF-8.
+- Para `.lrc` que ya existen: `convertir-lrc.ps1 -Raiz <carpeta> -Codificacion ansi` (prueba primero con `-Archivo` una sola). Los que tengan caracteres que no caben en ANSI (japonés sin romanizar) no se tocan.
