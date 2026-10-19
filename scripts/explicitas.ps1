@@ -1,4 +1,4 @@
-# Versiones EXPLICITAS: busca canciones censuradas/"clean" (en tus playlists, tus Me gusta y tu disco) que tienen
+﻿# Versiones EXPLICITAS: busca canciones censuradas/"clean" (en tus playlists, tus Me gusta y tu disco) que tienen
 # version explicita en Spotify (mismo artista, mismo titulo, duracion +-10 s, sin en vivo/remix si la original no lo es).
 # Sin -Aplicar: solo reporte (reportes-musica\explicitas.md). Con -Aplicar:
 #   - en cada playlist tuya y en Me gusta: quita la censurada y pone la explicita (si ya estaba, solo quita la censurada)

@@ -1,4 +1,4 @@
-# Titulos en japones/coreano -> "Romaji (Original)", p. ej. "Yoru ni Kakeru (夜に駆ける)", para encontrarlas facil en el reproductor.
+﻿# Titulos en japones/coreano -> "Romaji (Original)", p. ej. "Yoru ni Kakeru (夜に駆ける)", para encontrarlas facil en el reproductor.
 # Solo cambia la etiqueta TITLE (FLAC con metaflac; M4A/MP3 con mutagen). El nombre del archivo no se toca.
 # Sin -Aplicar solo muestra el plan. Con -Aplicar verifica que el audio y las demas etiquetas queden identicos.
 param([switch]$Aplicar, [string]$Raiz = "")

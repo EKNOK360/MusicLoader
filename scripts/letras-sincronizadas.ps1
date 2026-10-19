@@ -15,6 +15,7 @@ if (-not $Raiz) { $cfg = Join-Path $env:USERPROFILE 'reportes-musica\config.json
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\progreso.ps1"
 . "$PSScriptRoot\lrc-fuentes.ps1"
+. "$PSScriptRoot\lrc-ansi.ps1"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $dir = (Join-Path $env:USERPROFILE 'reportes-musica')
 $mf = Get-Content "$dir\metaflac-path.txt"
@@ -50,8 +51,9 @@ function LeerLrc($p) {  # detecta como esta guardado un .lrc: BOM UTF-8, UTF-8 v
 function EscribirLrc($audio, $texto) {  # .lrc al lado del audio, en ANSI o UTF-8 segun CodLrc; si no cabe en ANSI (p. ej. japones), UTF-8 con BOM
     $p = [IO.Path]::ChangeExtension($audio, '.lrc')
     if ((CodLrc $audio) -eq 'ansi') {
-        try { [IO.File]::WriteAllBytes($p, [Text.Encoding]::GetEncoding(1252, [Text.EncoderFallback]::ExceptionFallback, [Text.DecoderFallback]::ExceptionFallback).GetBytes($texto)); return }
-        catch { [IO.File]::WriteAllText($p, $texto, (New-Object Text.UTF8Encoding $true)); return }
+        $a = TextoAnsi $texto  # lrc-ansi.ps1: quita marcas (е rusa...) y ♪; $null si no cabe en ANSI
+        if ($null -ne $a) { [IO.File]::WriteAllBytes($p, $script:Ansi1252.GetBytes($a)) } else { [IO.File]::WriteAllText($p, $texto, (New-Object Text.UTF8Encoding $true)) }
+        return
     }
     [IO.File]::WriteAllText($p, $texto, (New-Object Text.UTF8Encoding $false))
 }

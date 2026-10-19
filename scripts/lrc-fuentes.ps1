@@ -29,7 +29,9 @@ function BuscarLrclib($art, $tit, $alb, $dur) {
         if (-not ($nt -and $na -and $t -and $a)) { return $false }
         ($t -eq $nt -or $t.Contains($nt) -or $nt.Contains($t)) -and ($a.Contains($na) -or $na.Contains($a))
     }
-    $c = @($c | ForEach-Object { $_ } | Where-Object { $_ -and $_.duration -and ($_.PSObject.Properties['deGet'] -or (Misma $_)) })
+    # el de /api/get puede traer el titulo en otra escritura, pero el ARTISTA si debe coincidir (si no, colaba p. ej. una "Melina" griega)
+    function MismoArtista($x) { $a = LrcNorm $x.artistName; $na -and $a -and ($a.Contains($na) -or $na.Contains($a)) }
+    $c = @($c | ForEach-Object { $_ } | Where-Object { $_ -and $_.duration -and (($_.PSObject.Properties['deGet'] -and (MismoArtista $_)) -or (Misma $_)) })
     $inst = [bool]($c | Where-Object { $_.instrumental -and [Math]::Abs([double]$_.duration - $dur) -le 2 })
     $b = $c | Where-Object { $_.syncedLyrics -and [Math]::Abs([double]$_.duration - $dur) -le 2 -and (LrcValida $_.syncedLyrics $dur) } | Sort-Object { [Math]::Abs([double]$_.duration - $dur) } | Select-Object -First 1
     [pscustomobject]@{ lrc = $(if ($b) { $b.syncedLyrics } else { '' }); fuente = 'LRCLIB'; inst = $inst }
