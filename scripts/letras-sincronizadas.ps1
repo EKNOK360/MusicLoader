@@ -169,4 +169,5 @@ if ($ConLrc) {
         [IO.File]::WriteAllText($lrc, $l, (New-Object Text.UTF8Encoding $false)); $n++
     }
     "Archivos .lrc escritos al lado de las canciones: $n"
+    "(Si el reproductor muestra 'dÃ­a' en vez de 'día', pasarlos a ANSI con convertir-lrc.ps1 -Codificacion ansi)"
 }
