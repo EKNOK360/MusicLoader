@@ -22,6 +22,7 @@ function Linea($t, $pref) {
     $activas = 0
     foreach ($f in Get-ChildItem $dir -Filter 'tarea-*.json' -ErrorAction SilentlyContinue) {
         try { $t = Get-Content $f.FullName -Raw | ConvertFrom-Json } catch { continue }
+        if ([datetime]$t.actualizado -lt (Get-Date).AddMinutes(-30) -and -not $t.terminado) { continue }   # tarea que se corto (sin avance en 30 min)
         if ([datetime]$t.actualizado -lt $arranque.AddHours(-12)) { continue }   # tareas viejas
         $k = $t.tarea
         # las tareas que ya habian terminado antes de arrancar no cuentan (si no, el vigilante se cierra al instante)

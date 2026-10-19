@@ -1,6 +1,7 @@
 ﻿# Pasa todo lo de "D:\SpotiFLAC\Por recuperar\Artista\Album\..." a "D:\SpotiFLAC\Artista\Album\...".
 # Si ya existe un archivo con el mismo nombre, el viejo se mueve a D:\SpotiFLAC\_reemplazados (no se borra nada).
-param([string]$Raiz = "D:\SpotiFLAC", [string]$Origen = "Por recuperar", [switch]$Prueba)
+param([string]$Raiz = "", [string]$Origen = "Por recuperar", [switch]$Prueba)
+if (-not $Raiz) { $cfg = Join-Path $env:USERPROFILE 'reportes-musica\config.json'; $Raiz = if (Test-Path $cfg) { (Get-Content $cfg -Raw | ConvertFrom-Json).raiz } else { 'D:\SpotiFLAC' } }
 $ErrorActionPreference = 'Stop'
 $src = Join-Path $Raiz $Origen
 $bak = Join-Path $Raiz "_reemplazados"

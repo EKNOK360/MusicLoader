@@ -1,4 +1,6 @@
-﻿# Solo lectura: busca en MusicBrainz las etiquetas de genero de cada artista.
+﻿param([string]$Raiz = "")
+if (-not $Raiz) { $cfg = Join-Path $env:USERPROFILE 'reportes-musica\config.json'; $Raiz = if (Test-Path $cfg) { (Get-Content $cfg -Raw | ConvertFrom-Json).raiz } else { 'D:\SpotiFLAC' } }
+# Solo lectura: busca en MusicBrainz las etiquetas de genero de cada artista.
 # Guarda reportes-musica\mb-generos.json (artista -> etiquetas). Se puede cortar y continuar.
 $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -6,7 +8,7 @@ $dir = (Join-Path $env:USERPROFILE 'reportes-musica')
 $out = "$dir\mb-generos.json"
 $res = @{}; if (Test-Path $out) { (Get-Content $out -Raw -Encoding utf8 | ConvertFrom-Json).PSObject.Properties | ForEach-Object { $res[$_.Name] = $_.Value } }
 $ua = @{ 'User-Agent' = 'OrganizadorMusicaPersonal/1.0' }
-$artistas = @(Get-ChildItem 'D:\SpotiFLAC' -Recurse -File -Include *.flac, *.m4a, *.mp3 | ForEach-Object { (($_.BaseName -split ' - ', 2)[0] -split ',\s*')[0].Trim() } | Sort-Object -Unique); $artistas | Set-Content "$dir\artistas.txt" -Encoding utf8
+$artistas = @(Get-ChildItem -LiteralPath $Raiz -Recurse -File -Include *.flac, *.m4a, *.mp3 | ForEach-Object { (($_.BaseName -split ' - ', 2)[0] -split ',\s*')[0].Trim() } | Sort-Object -Unique); $artistas | Set-Content "$dir\artistas.txt" -Encoding utf8
 $i = 0
 foreach ($a in $artistas) {
     $i++
