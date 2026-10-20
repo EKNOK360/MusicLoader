@@ -1,9 +1,9 @@
 ﻿# Versiones EXPLICITAS sin usar la API de Spotify (que bloquea ~24 h tras ~700 busquedas al dia).
 # Para cada cancion del disco:
 #   1) iTunes (Apple Music) o, si no, Deezer dicen si existe una version explicita (mismo artista, titulo y duracion +-10 s).
-#   2) song.link convierte ese enlace de Apple al de Spotify.
+#   2) (song.link ya pide clave) se anota la cancion; el link de Spotify de la explicita se busca despues con la API.
 #   3) Si ese enlace de Spotify es distinto al de tu archivo (etiqueta COMMENT de SpotiFLAC), tu archivo es la version
-#      censurada: se imprime "EXPLICITA | Artista - Titulo | link" y se guarda en reportes-musica\explicitas-links.txt.
+#      censurada: se imprime "CENSURADA | Artista - Titulo | ..." y se guarda en reportes-musica\explicitas-links.txt.
 # Va primero por los generos con mas versiones censuradas (reggaeton, trap, hip-hop, pop...). Se puede cortar y seguir.
 param([string]$Raiz = "")
 $dir = Join-Path $env:USERPROFILE 'reportes-musica'
@@ -29,7 +29,7 @@ $lista = foreach ($f in Get-ChildItem -LiteralPath $Raiz -Recurse -File -Filter 
 }
 $lista = @($lista | Sort-Object p)
 $cf = "$dir\explicitas-sin-spotify.json"; $cache = @{}; if (Test-Path $cf) { (Get-Content $cf -Raw -Encoding utf8 | ConvertFrom-Json).PSObject.Properties | ForEach-Object { $cache[$_.Name] = $_.Value } }
-$out = "$dir\explicitas-links.txt"; $n = 0; $hall = @($cache.Values | Where-Object { $_ -like 'https://*' }).Count
+$out = "$dir\explicitas-links.txt"; $n = 0; $hall = @($cache.Values | Where-Object { $_ -like 'censurada*' }).Count
 foreach ($x in $lista) {
     $n++; $f = $x.f.FullName
     if ($n % 25 -eq 0) { $cache | ConvertTo-Json -Compress | Set-Content $cf -Encoding utf8 }  # guardar avance (se puede cortar y seguir)
@@ -50,17 +50,12 @@ foreach ($x in $lista) {
         if ($d) { $origen = $d.link }
     }
     if (-not $origen) { $cache[$id] = 'no'; continue }
-    # Apple/Deezer -> Spotify con song.link (~10 consultas/min sin clave)
-    try { $sl = Json "https://api.song.link/v1-alpha.1/links?userCountry=US&url=$([uri]::EscapeDataString($origen))" } catch { Start-Sleep -Seconds 60; continue }
-    Start-Sleep -Milliseconds 6500
-    $sp = $sl.linksByPlatform.spotify.url
-    if (-not $sp) { $cache[$id] = 'sin-spotify'; continue }
-    if ($sp -match "/track/$id") { $cache[$id] = 'ya-explicita'; continue }   # tu archivo YA es la version explicita
-    # comprobar en la pagina publica de Spotify (no usa la API): tu archivo debe ser censurado y el link nuevo explicito
+    # song.link ya pide clave (401), asi que el link de Spotify se busca despues con la API (pocas busquedas).
+    # Aqui solo se confirma en la pagina publica de Spotify que TU archivo es la version censurada.
     if ((Explicita $id) -ne $false) { $cache[$id] = 'ya-explicita'; continue }
-    if ((Explicita ($sp -replace '^.*/track/([A-Za-z0-9]{22}).*$', '$1')) -ne $true) { $cache[$id] = 'link-no-explicito'; continue }
-    $cache[$id] = $sp; $hall++
-    $linea = "EXPLICITA | $art - $tit | $sp"
+    $donde = if ($e) { "Apple: $($e.collectionName)" } else { "Deezer: $($d.album.title)" }
+    $cache[$id] = "censurada|$origen"; $hall++
+    $linea = "CENSURADA | $art - $tit | tu archivo: https://open.spotify.com/track/$id | explicita en $donde"
     $linea; Add-Content $out -Value $linea -Encoding utf8
     if ($n % 10 -eq 0) { $cache | ConvertTo-Json -Compress | Set-Content $cf -Encoding utf8 }
 }
