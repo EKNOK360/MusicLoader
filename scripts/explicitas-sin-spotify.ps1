@@ -1,6 +1,6 @@
 ﻿# Versiones EXPLICITAS sin usar la API de Spotify (que bloquea ~24 h tras ~700 busquedas al dia).
 # Para cada cancion del disco:
-#   1) iTunes (Apple Music) dice si existe una version explicita (mismo artista, titulo y duracion +-10 s).
+#   1) iTunes (Apple Music) o, si no, Deezer dicen si existe una version explicita (mismo artista, titulo y duracion +-10 s).
 #   2) song.link convierte ese enlace de Apple al de Spotify.
 #   3) Si ese enlace de Spotify es distinto al de tu archivo (etiqueta COMMENT de SpotiFLAC), tu archivo es la version
 #      censurada: se imprime "EXPLICITA | Artista - Titulo | link" y se guarda en reportes-musica\explicitas-links.txt.
@@ -32,6 +32,7 @@ $cf = "$dir\explicitas-sin-spotify.json"; $cache = @{}; if (Test-Path $cf) { (Ge
 $out = "$dir\explicitas-links.txt"; $n = 0; $hall = @($cache.Values | Where-Object { $_ -like 'https://*' }).Count
 foreach ($x in $lista) {
     $n++; $f = $x.f.FullName
+    if ($n % 25 -eq 0) { $cache | ConvertTo-Json -Compress | Set-Content $cf -Encoding utf8 }  # guardar avance (se puede cortar y seguir)
     Progreso 'explicitas-sin-spotify' $n $lista.Count @{ con_explicita = $hall } $x.f.BaseName
     $c = Tag $f 'COMMENT'; if ("$c" -notmatch 'open\.spotify\.com/track/([A-Za-z0-9]{22})') { continue }; $id = $Matches[1]
     if ($cache.ContainsKey($id)) { continue }
@@ -42,9 +43,15 @@ foreach ($x in $lista) {
     } catch { Start-Sleep -Seconds 60; continue }
     Start-Sleep -Milliseconds 3100
     $e = $r | Where-Object { $_.trackExplicitness -eq 'explicit' -and (Base $_.trackName) -eq (Base $tit) -and ((Norm $_.artistName).Contains((Norm $art)) -or (Norm $art).Contains((Norm $_.artistName))) -and [Math]::Abs($_.trackTimeMillis / 1000 - $dur) -le 10 } | Select-Object -First 1
-    if (-not $e) { $cache[$id] = 'no'; continue }
-    # Apple -> Spotify con song.link (~10 consultas/min sin clave)
-    try { $sl = Json "https://api.song.link/v1-alpha.1/links?userCountry=US&url=$([uri]::EscapeDataString($e.trackViewUrl))" } catch { Start-Sleep -Seconds 60; continue }
+    $origen = if ($e) { $e.trackViewUrl } else { '' }
+    if (-not $origen) {  # Deezer: otro catalogo (sin cuenta, ~50 consultas cada 5 s)
+        try { $dz = @((Json "https://api.deezer.com/search?limit=25&q=$([uri]::EscapeDataString("$art $(($tit -replace '\(.*?\)|\[.*?\]| - .*$', '').Trim())"))").data) } catch { $dz = @() }
+        $d = $dz | Where-Object { $_.explicit_lyrics -and (Base $_.title) -eq (Base $tit) -and ((Norm $_.artist.name).Contains((Norm $art)) -or (Norm $art).Contains((Norm $_.artist.name))) -and [Math]::Abs($_.duration - $dur) -le 10 } | Select-Object -First 1
+        if ($d) { $origen = $d.link }
+    }
+    if (-not $origen) { $cache[$id] = 'no'; continue }
+    # Apple/Deezer -> Spotify con song.link (~10 consultas/min sin clave)
+    try { $sl = Json "https://api.song.link/v1-alpha.1/links?userCountry=US&url=$([uri]::EscapeDataString($origen))" } catch { Start-Sleep -Seconds 60; continue }
     Start-Sleep -Milliseconds 6500
     $sp = $sl.linksByPlatform.spotify.url
     if (-not $sp) { $cache[$id] = 'sin-spotify'; continue }
