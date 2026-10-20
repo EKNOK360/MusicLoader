@@ -10,6 +10,11 @@ function Base($s) {
 }
 function Norm($s) { ($s.Normalize([Text.NormalizationForm]::FormD) -replace '\p{Mn}', '').ToLower() -replace '[^a-z0-9]', '' }
 function MismoArtista($a, $b) { $x = Norm $a; $y = Norm $b; $x -and $y -and ($x.Contains($y) -or $y.Contains($x)) }
+function PreferirExplicita($res) {  # si una cancion viene en version normal y explicita, se queda la EXPLICITA (mismo orden de canciones)
+    $orden = New-Object Collections.Generic.List[string]; $mejor = @{}
+    foreach ($t in $res) { $k = "$(Norm $t.artists[0].name)|$(Base $t.name)"; if (-not $mejor.ContainsKey($k)) { $orden.Add($k); $mejor[$k] = $t } elseif ($t.explicit -and -not $mejor[$k].explicit) { $mejor[$k] = $t } }
+    foreach ($k in $orden) { $mejor[$k] }
+}
 function LeerPlaylist($id) {
     $out = @(); $next = "/playlists/$id/items?limit=100"
     while ($next) { $pg = Api Get $next; $pg.items | ForEach-Object { $x = if ($_.item) { $_.item } else { $_.track }; if ($x) { $out += $x } }; $next = $pg.next }
@@ -52,7 +57,7 @@ foreach ($l in Get-Content $Lista -Encoding utf8 | Where-Object { $_ -match '\|'
         $n = [int]$Matches[1]
         try {
             $qa = [uri]::EscapeDataString('artist:"' + $art + '"')
-            $res = @((Api Get "/search?type=track&limit=10&q=$qa").tracks.items | Where-Object { $_ -and ($_.artists.name | Where-Object { (Norm $_) -eq (Norm $art) }) })
+            $res = @((Api Get "/search?type=track&limit=10&q=$qa").tracks.items | Where-Object { $_ -and ($_.artists.name | Where-Object { (Norm $_) -eq (Norm $art) }) }); $res = @(PreferirExplicita $res)
             $puestas = 0
             foreach ($t in $res) {
                 if ($puestas -ge $n) { break }
@@ -69,7 +74,7 @@ foreach ($l in Get-Content $Lista -Encoding utf8 | Where-Object { $_ -match '\|'
     # "?texto" = busqueda libre (para piezas clasicas con nombres largos); toma el primer resultado del artista
     if ($tit.StartsWith('?')) {
         try {
-            $res = @((Api Get "/search?type=track&limit=10&q=$([uri]::EscapeDataString($tit.TrimStart('?') + ' ' + $art))").tracks.items | Where-Object { $_ -and ($_.artists.name | Where-Object { MismoArtista $_ $art }) })
+            $res = @((Api Get "/search?type=track&limit=10&q=$([uri]::EscapeDataString($tit.TrimStart('?') + ' ' + $art))").tracks.items | Where-Object { $_ -and ($_.artists.name | Where-Object { MismoArtista $_ $art }) }); $res = @(PreferirExplicita $res)
             $t = $res | Where-Object { $b = Base $_.name; -not $enPl.Contains("$(Norm $art)|$b") -and -not ($_.artists.name | Where-Object { $tengo.Contains("$(Norm $_)|$b") }) } | Select-Object -First 1
             if (-not $t -and @($res | Where-Object { $tengo.Contains("$(Norm $art)|$(Base $_.name)") })) { $yaTenia += "$art - $tit (descargada)"; continue }
             if ($t) { $agregadas += [pscustomobject]@{ Genero = $gen; Texto = "$(($t.artists.name | Select-Object -First 2) -join ', ') - $($t.name)"; Uri = $t.uri }; [void]$enPl.Add("$(Norm $art)|$(Base $t.name)") }
@@ -86,7 +91,7 @@ foreach ($l in Get-Content $Lista -Encoding utf8 | Where-Object { $_ -match '\|'
         $q = [uri]::EscapeDataString("track:$tit artist:$art")
         $res = @((Api Get "/search?type=track&limit=10&q=$q").tracks.items | Where-Object { $_ })
         if (-not $res) { $res = @((Api Get "/search?type=track&limit=10&q=$([uri]::EscapeDataString("$tit $art"))").tracks.items | Where-Object { $_ }) }
-        $res = @($res | Where-Object { $_.artists.name | Where-Object { MismoArtista $_ $art } })
+        $res = @(PreferirExplicita @($res | Where-Object { $_.artists.name | Where-Object { MismoArtista $_ $art } }))
         $t = $res | Where-Object { (Base $_.name) -eq (Base $tit) } | Select-Object -First 1
         if (-not $t) { $noHalladas += "$art - $tit"; continue }
         $agregadas += [pscustomobject]@{ Genero = $gen; Texto = "$($t.artists[0].name) - $($t.name)"; Uri = $t.uri }

@@ -79,3 +79,8 @@ Lo más simple: `mantenimiento.ps1` en segundo plano + Monitor con `reporte-tare
 ## Letras en reproductores viejitos
 - Si el usuario dice que su reproductor es **viejito/sencillo** (o ve `dÃ­a` en vez de `día`): `letras-sincronizadas.ps1 -Raiz <carpeta> -Aplicar -ConLrc -Reproductor viejito` (los `.lrc` en ANSI). Si es **moderno**: `-Reproductor moderno` (UTF-8). Sin indicarlo: `.lrc` de MP3 en ANSI y de FLAC/M4A en UTF-8.
 - Para `.lrc` que ya existen: `convertir-lrc.ps1 -Raiz <carpeta> -Codificacion ansi` (prueba primero con `-Archivo` una sola). Los que tengan caracteres que no caben en ANSI (japonés sin romanizar) no se tocan.
+
+
+## Versiones explícitas
+- Al recomendar o agregar canciones, si existe la **versión explícita** se usa esa (`PreferirExplicita` en `recomendar-y-limpiar.ps1`); nunca la censurada/clean/radio edit.
+- Para revisar lo que ya tiene: `explicitas.ps1` (reporte, busca despacio: ~50/min; si Spotify limita, se detiene sin anotar falsos "no tiene") → `-Apartar` → `-Aplicar` solo si el usuario lo confirma.
