@@ -23,7 +23,7 @@ $sueltas = @{}  # nombre sin extension -> carpeta Artista\Album (para que el .lr
 foreach ($a in Get-ChildItem -LiteralPath $src -File | Where-Object { $_.Extension -in '.flac', '.m4a', '.mp3' }) { $sueltas[$a.BaseName] = CarpetaPorEtiquetas $a.FullName }
 
 foreach ($f in Get-ChildItem -LiteralPath $src -Recurse -File) {
-    if ($f.Name -like '*.cover.jpg' -or $f.Name -like '.spotiflac-*' -or $f.Extension -eq '.tmp') { continue }  # temporales de la descarga
+    if ($f.Name -like '*.cover.jpg' -or $f.Name -like '.spotiflac-*' -or $f.Extension -in '.tmp', '.txt') { continue }  # temporales y la lista de avance de SpotiFLAC
     $rel = $f.FullName.Substring($src.Length + 1)
     if (-not (Split-Path $rel) -and $sueltas[$f.BaseName]) { $rel = Join-Path $sueltas[$f.BaseName] $rel }  # suelta -> Artista\Album
     $dest = Join-Path $Raiz $rel
