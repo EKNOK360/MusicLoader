@@ -7,7 +7,7 @@
 # -Apartar: (usa el ultimo reporte, sin Spotify) mueve del disco las censuradas que tienen version explicita a
 #   <Raiz>\_censuradas\Artista\Album\ (con su .lrc) y borra las carpetas que queden vacias. Para borrarlas cuando
 #   ya bajaste las explicitas de la playlist "Descargar Explicitas".
-param([switch]$Aplicar, [string]$Raiz = "", [string[]]$Excluir = @('Descargar*'), [switch]$Apartar)
+param([switch]$Aplicar, [string]$Raiz = "", [string[]]$Excluir = @('Descargar*'), [switch]$Apartar, [int]$MaxBusquedas = 400)  # -MaxBusquedas: tope de busquedas en Spotify por vez (~700/dia la bloquea 24 h)
 $dir = Join-Path $env:USERPROFILE 'reportes-musica'
 if (-not $Raiz) { $cfg = Join-Path $dir 'config.json'; $Raiz = if (Test-Path $cfg) { (Get-Content $cfg -Raw | ConvertFrom-Json).raiz } else { 'D:\SpotiFLAC' } }
 if ($Apartar) {
@@ -50,10 +50,15 @@ foreach ($f in Get-ChildItem -LiteralPath $Raiz -Recurse -File | Where-Object { 
 
 # 2) para cada no explicita, buscar su version explicita (cache: no repetir busquedas)
 $cacheF = "$dir\explicitas-cache.json"; $cache = @{}; if (Test-Path $cacheF) { (Get-Content $cacheF -Raw -Encoding utf8 | ConvertFrom-Json).PSObject.Properties | ForEach-Object { $cache[$_.Name] = $_.Value } }
-$limpias = @($pista.Values | Where-Object { -not $_.explicit }); $n = 0; $pares = @()
+$limpias = @($pista.Values | Where-Object { -not $_.explicit }); $n = 0; $pares = @(); $busq = 0; $pendientes = 0
+$itunes = @{}; if (Test-Path "$dir\itunes-explicitas.json") { (Get-Content "$dir\itunes-explicitas.json" -Raw -Encoding utf8 | ConvertFrom-Json).PSObject.Properties | ForEach-Object { $itunes[$_.Name] = $_.Value } }
 foreach ($t in $limpias) {
     $n++; Progreso 'explicitas' $n $limpias.Count @{ con_explicita = $pares.Count } "$($t.artists[0].name) - $($t.name)"
+    # pre-filtro iTunes (explicitas-prefiltro.ps1): si Apple dice que NO hay version explicita, no se gasta busqueda en Spotify
+    if (-not $cache.ContainsKey($t.uri) -and $itunes[$t.uri] -eq 'no') { $cache[$t.uri] = '' }
+    if (-not $cache.ContainsKey($t.uri) -and $busq -ge $MaxBusquedas) { $pendientes++; continue }
     if (-not $cache.ContainsKey($t.uri)) {
+        $busq++
         $q = [uri]::EscapeDataString("track:$(($t.name -replace ' - .*$|\(.*?\)', '').Trim()) artist:$($t.artists[0].name)")
         $e = $null
         try { $res = (Api Get "/search?type=track&limit=10&q=$q").tracks.items }
@@ -75,6 +80,7 @@ $pares | Export-Clixml "$dir\explicitas-plan.xml"
 $md = @("# Canciones censuradas con version explicita ($($pares.Count))", '', '| # | Cancion | Album censurado | Album explicito | Donde |', '|---|---|---|---|---|')
 $i = 0; foreach ($p in $pares) { $i++; $md += "| $i | $($p.nombre) | $($p.albumLimpio) | $($p.albumExplicito) | $(($p.donde -replace 'playlist:', '')) |" }
 $md | Set-Content "$dir\explicitas.md" -Encoding utf8
+if ($pendientes) { "PAUSA: quedan $pendientes por buscar en Spotify (tope de $MaxBusquedas por vez). Correr de nuevo otro dia: no repite lo ya buscado." }
 "Revisadas: $($pista.Count) (no explicitas: $($limpias.Count)) | con version explicita disponible: $($pares.Count) | reporte: reportes-musica\explicitas.md"
 $pares | ForEach-Object { "$($_.nombre)  [$($_.albumLimpio) -> $($_.albumExplicito)]  en: $($_.donde -replace 'playlist:', '')" }
 if (-not $Aplicar) { return }
