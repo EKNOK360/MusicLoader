@@ -3,7 +3,7 @@
 # Lee las canciones de reportes-musica\playlists.json (tus playlists) y de tu disco (enlace de Spotify en COMMENT).
 # Guarda reportes-musica\itunes-explicitas.json:  uri -> 'explicit' | 'no' | '?' (no estaba en iTunes)
 # ~19 consultas/min (limite de iTunes); se puede cortar y seguir despues sin repetir.
-param([string]$Raiz = "")
+param([string]$Raiz = "")  # (las playlists "Descargar..." y las copias "(2)" no cuentan)
 $dir = Join-Path $env:USERPROFILE 'reportes-musica'
 if (-not $Raiz) { $cfg = Join-Path $dir 'config.json'; $Raiz = if (Test-Path $cfg) { (Get-Content $cfg -Raw | ConvertFrom-Json).raiz } else { 'D:\SpotiFLAC' } }
 . "$PSScriptRoot\progreso.ps1"
@@ -15,7 +15,7 @@ function Base($s) { Norm (($s -replace '\((clean|edited|radio edit|explicit|cens
 
 # canciones: uri -> artista, titulo
 $canc = [ordered]@{}
-foreach ($p in @(Get-Content "$dir\playlists.json" -Raw -Encoding utf8 | ConvertFrom-Json)) { foreach ($t in $p.canciones) { if ($t.u -like 'spotify:track:*' -and -not $canc.Contains($t.u)) { $canc[$t.u] = @{ a = ($t.a -split ', ')[0]; n = $t.n } } } }
+foreach ($p in @(Get-Content "$dir\playlists.json" -Raw -Encoding utf8 | ConvertFrom-Json) | Where-Object { $_.nombre -notlike 'Descargar*' -and $_.nombre -notlike '* (2)' }) { foreach ($t in $p.canciones) { if ($t.u -like 'spotify:track:*' -and -not $canc.Contains($t.u)) { $canc[$t.u] = @{ a = ($t.a -split ', ')[0]; n = $t.n } } } }
 foreach ($f in Get-ChildItem -LiteralPath $Raiz -Recurse -File | Where-Object { $_.Extension -in '.flac', '.m4a', '.mp3' }) {
     $c = if ($f.Extension -eq '.flac') { & $mf --no-utf8-convert --show-tag=COMMENT $f.FullName } else { & $ffp -v error -show_entries format_tags=comment -of default=nw=1:nk=1 $f.FullName }
     if ("$c" -match 'open\.spotify\.com/track/([A-Za-z0-9]{22})') { $u = "spotify:track:$($Matches[1])"; if (-not $canc.Contains($u)) { $p = $f.BaseName -split ' - ', 2; $canc[$u] = @{ a = ($p[0] -split ',\s*')[0]; n = $p[1] } } }
