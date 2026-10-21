@@ -85,3 +85,9 @@ Lo más simple: `mantenimiento.ps1` en segundo plano + Monitor con `reporte-tare
 - Al recomendar o agregar canciones, si existe la **versión explícita** se usa esa (`PreferirExplicita` en `recomendar-y-limpiar.ps1`); nunca la censurada/clean/radio edit.
 - **Sin API de Spotify** (recomendado; la API bloquea ~24 h tras ~700 busquedas al dia): `explicitas-sin-spotify.ps1` usa iTunes + song.link y confirma en la pagina publica de Spotify (embed, `isExplicit`) que el archivo es censurado y el link explicito. Imprime `EXPLICITA | Artista - Titulo | link` y guarda `reportes-musica\explicitas-links.txt`.
 - Para revisar lo que ya tiene: `explicitas.ps1` (reporte, busca despacio: ~50/min; si Spotify limita, se detiene sin anotar falsos "no tiene") → `-Apartar` → `-Aplicar` solo si el usuario lo confirma.
+
+
+## Reproductores sencillos que no aguantan FLAC hi-res
+- Sintomas: "archivo danado / no compatible", se corta a los pocos segundos, genero "unknown" y muestra el nombre del archivo en vez del titulo.
+- Probar antes con 3 versiones de una cancion (FLAC con portada chica / FLAC 16 bits / MP3) y preguntar cual suena.
+- Si sirve FLAC 16 bits: `compatibilidad.ps1 -Raiz <carpeta> -Aplicar` (24 bits o >48 kHz -> 16 bits 44,1 kHz, portada 500 px; etiquetas y letra copiadas con `copiar-etiquetas.py`; cada archivo se reemplaza solo si se decodifica bien, dura lo mismo y conserva sus etiquetas).

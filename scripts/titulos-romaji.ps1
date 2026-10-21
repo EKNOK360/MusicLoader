@@ -46,6 +46,6 @@ foreach ($x in $plan) {
     else { $e = Join-Path $env:TEMP 'tit.txt'; [IO.File]::WriteAllText($e, $x.despues, (New-Object Text.UTF8Encoding $false)); & $py "$PSScriptRoot\letra-tag.py" titulo-escribir $p $e }
     if ($LASTEXITCODE -eq 0 -and $md5 -and $md5 -eq ((& $ffm -v error -i $p -map 0:a -f md5 - 2>$null) -join '') -and (LeerTitulo $p) -eq $x.despues -and -not (Compare-Object @($antes) @(& $otras $p))) {
         (Get-Item -LiteralPath $p).LastWriteTime = $mt; $bien++; Remove-Item $bk
-    } else { Copy-Item $bk -LiteralPath $p -Force; $mal += $p }
+    } else { Copy-Item -LiteralPath $bk -Destination $p -Force; $mal += $p }
 }
 "Titulos cambiados: $bien | con problemas (restaurados): $($mal.Count)"; $mal

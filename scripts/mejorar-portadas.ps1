@@ -37,6 +37,6 @@ foreach ($f in Get-ChildItem $Raiz -Recurse -File -Filter *.flac) {
     & $mf --preserve-modtime "--import-picture-from=3||||$img" $f.FullName
     $nuevo = Ancho $f.FullName
     if ($h -eq (HuellaFlac $f.FullName) -and -not (Compare-Object @($et) @(Etiquetas $f.FullName)) -and $nuevo -ge $MinPx) { $res += "LISTA  $($f.Name): $w px -> $nuevo px"; Remove-Item $bk }
-    else { Copy-Item $bk -LiteralPath $f.FullName -Force; $res += "RESTAURADA (algo no cuadro)  $($f.Name)" }
+    else { Copy-Item -LiteralPath $bk -Destination $f.FullName -Force; $res += "RESTAURADA (algo no cuadro)  $($f.Name)" }
 }
 if (-not $res) { "Todas las portadas tienen $MinPx px o mas." } else { $res }

@@ -12,6 +12,6 @@ foreach ($f in Get-ChildItem 'D:\SpotiFLAC' -Recurse -File -Include *.m4a, *.mp3
     powershell -NoProfile -ExecutionPolicy Bypass -File "$PSScriptRoot\genero-windows.ps1" -Archivo $f.FullName -Generos $g
     $desp = Firma $f.FullName
     $nuevo = & $fp -v error -show_entries format_tags=genre -of default=nw=1:nk=1 $f.FullName
-    if ($antes -eq $desp -and $nuevo) { (Get-Item -LiteralPath $f.FullName).LastWriteTime = $fecha; "OK  $($f.BaseName) -> $nuevo" } else { Copy-Item $copia -LiteralPath $f.FullName -Force; "RESTAURADO: $($f.Name)" }
+    if ($antes -eq $desp -and $nuevo) { (Get-Item -LiteralPath $f.FullName).LastWriteTime = $fecha; "OK  $($f.BaseName) -> $nuevo" } else { Copy-Item -LiteralPath $copia -Destination $f.FullName -Force; "RESTAURADO: $($f.Name)" }
 }
 Remove-Item $bk -Recurse -Force

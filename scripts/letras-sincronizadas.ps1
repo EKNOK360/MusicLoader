@@ -166,7 +166,7 @@ if ($Aplicar) {
                 (Get-Item -LiteralPath $p).LastWriteTime = $mt; $bien++; Remove-Item $bk
                 if ($p -like '*.mp3') { EscribirLrc $p $x.lrc }  # y el .lrc al lado (ANSI por defecto en MP3)
             }
-            else { Copy-Item $bk -LiteralPath $p -Force; $mal += $p }
+            else { Copy-Item -LiteralPath $bk -Destination $p -Force; $mal += $p }
             Progreso 'letras-escribir' ($bien + $mal.Count) $plan.Count @{ escritas = $bien; problemas = $mal.Count } ([IO.Path]::GetFileNameWithoutExtension($p)); continue
         }
         $antes = Etiquetas $p; $h = HuellaAudio $p
