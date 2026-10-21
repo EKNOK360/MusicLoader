@@ -91,3 +91,4 @@ Lo más simple: `mantenimiento.ps1` en segundo plano + Monitor con `reporte-tare
 - Sintomas: "archivo danado / no compatible", se corta a los pocos segundos, genero "unknown" y muestra el nombre del archivo en vez del titulo.
 - Probar antes con 3 versiones de una cancion (FLAC con portada chica / FLAC 16 bits / MP3) y preguntar cual suena.
 - Si sirve FLAC 16 bits: `compatibilidad.ps1 -Raiz <carpeta> -Aplicar` (24 bits o >48 kHz -> 16 bits 44,1 kHz, portada 500 px; etiquetas y letra copiadas con `copiar-etiquetas.py`; cada archivo se reemplaza solo si se decodifica bien, dura lo mismo y conserva sus etiquetas).
+- Si el reproductor muestra el nombre del archivo: `renombrar-titulo.ps1 -Raiz <carpeta> -Aplicar` deja cada archivo como "Titulo.flac" (y su .lrc). Solo en reproductores ajenos, no en la biblioteca principal.
